@@ -1,7 +1,7 @@
 export { GroundLine } from "./GroundLine";
 export {
-	getSceneGroundLine,
 	GroundLineManager,
+	getSceneGroundLine,
 	registerWithGroundLine,
 } from "./GroundLineManager";
 export { GroundLineRenderer } from "./GroundLineRenderer";

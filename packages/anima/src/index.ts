@@ -31,21 +31,20 @@ export {
 	registerHotspotWithEditor,
 	registerWithEditor,
 } from "./editor";
-
-// Ground Line
-export * as groundline from "./groundline";
-export {
-	getSceneGroundLine,
-	GroundLine,
-	GroundLineManager,
-	GroundLineRenderer,
-	registerWithGroundLine,
-} from "./groundline";
 export type {
 	GroundLineCallbacks,
 	GroundLineConfig,
 	GroundLinePoint,
 	PositionUpdateCallback,
+} from "./groundline";
+// Ground Line
+export * as groundline from "./groundline";
+export {
+	GroundLine,
+	GroundLineManager,
+	GroundLineRenderer,
+	getSceneGroundLine,
+	registerWithGroundLine,
 } from "./groundline";
 
 export type {

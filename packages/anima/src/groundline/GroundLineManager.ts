@@ -25,7 +25,9 @@ const sceneGroundLines = new WeakMap<Scene, GroundLineManager>();
 /**
  * Get the ground line manager for a scene
  */
-export function getSceneGroundLine(scene: Scene): GroundLineManager | undefined {
+export function getSceneGroundLine(
+	scene: Scene,
+): GroundLineManager | undefined {
 	return sceneGroundLines.get(scene);
 }
 

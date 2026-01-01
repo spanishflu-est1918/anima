@@ -109,7 +109,11 @@ export class SelectionManager {
 				y: Math.round(y),
 				width: 0,
 				height: 0,
-				json: JSON.stringify({ index, x: Math.round(x), y: Math.round(y) }, null, 2),
+				json: JSON.stringify(
+					{ index, x: Math.round(x), y: Math.round(y) },
+					null,
+					2,
+				),
 			};
 		}
 

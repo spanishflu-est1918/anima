@@ -68,7 +68,14 @@ export class HotspotEditor {
 		startY: number;
 		originalX: number;
 		originalY: number;
-	} = { active: false, pointIndex: -1, startX: 0, startY: 0, originalX: 0, originalY: 0 };
+	} = {
+		active: false,
+		pointIndex: -1,
+		startX: 0,
+		startY: 0,
+		originalX: 0,
+		originalY: 0,
+	};
 
 	// Track all suspended entities (to resume when editor closes)
 	private suspendedEntities: Set<string> = new Set();
@@ -131,7 +138,9 @@ export class HotspotEditor {
 		if (this.enabled) {
 			this.setupPointerEvents();
 			this.redraw();
-			console.log("🎨 Editor ON | E=toggle S=copyAll C=copySelected A=addPoint Del=removePoint");
+			console.log(
+				"🎨 Editor ON | E=toggle S=copyAll C=copySelected A=addPoint Del=removePoint",
+			);
 		} else {
 			this.handles.clear();
 			this.renderer.clear();
@@ -157,8 +166,14 @@ export class HotspotEditor {
 		);
 		// Ground line point shortcuts
 		kb?.on("keydown-A", () => this.enabled && this.addGroundLinePoint());
-		kb?.on("keydown-DELETE", () => this.enabled && this.removeSelectedGroundLinePoint());
-		kb?.on("keydown-BACKSPACE", () => this.enabled && this.removeSelectedGroundLinePoint());
+		kb?.on(
+			"keydown-DELETE",
+			() => this.enabled && this.removeSelectedGroundLinePoint(),
+		);
+		kb?.on(
+			"keydown-BACKSPACE",
+			() => this.enabled && this.removeSelectedGroundLinePoint(),
+		);
 	}
 
 	private setupPointerEvents(): void {
@@ -249,7 +264,11 @@ export class HotspotEditor {
 			const dy = wy - this.groundLineDrag.startY;
 			const newX = this.groundLineDrag.originalX + dx;
 			const newY = this.groundLineDrag.originalY + dy;
-			this.groundLineManager.movePoint(this.groundLineDrag.pointIndex, newX, newY);
+			this.groundLineManager.movePoint(
+				this.groundLineDrag.pointIndex,
+				newX,
+				newY,
+			);
 			return;
 		}
 
@@ -263,6 +282,11 @@ export class HotspotEditor {
 		this.groundLineDrag.active = false;
 		this.drag.end();
 		// Ground line stays suspended - character keeps its editor position
+
+		// Re-notify selection with updated position
+		if (this.selection.current) {
+			this.selection.select(this.selection.current);
+		}
 	};
 
 	private startResize(
@@ -380,12 +404,15 @@ export class HotspotEditor {
 		const points = this.groundLineManager.getPoints();
 		const p = points[newIndex];
 		this.select({ type: "groundLinePoint", index: newIndex, x: p.x, y: p.y });
-		console.log(`📍 Added ground line point ${newIndex} at (${Math.round(wx)}, ${Math.round(wy)})`);
+		console.log(
+			`📍 Added ground line point ${newIndex} at (${Math.round(wx)}, ${Math.round(wy)})`,
+		);
 	}
 
 	private removeSelectedGroundLinePoint(): void {
 		const sel = this.selection.current;
-		if (!sel || sel.type !== "groundLinePoint" || !this.groundLineManager) return;
+		if (!sel || sel.type !== "groundLinePoint" || !this.groundLineManager)
+			return;
 
 		this.groundLineManager.removePoint(sel.index);
 		this.select(null);
