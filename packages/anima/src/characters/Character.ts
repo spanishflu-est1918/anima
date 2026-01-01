@@ -1,5 +1,9 @@
 import { GameObjects, type Scene } from "phaser";
 import { registerWithEditor } from "../editor";
+import {
+	registerWithGroundLine,
+	type PositionUpdateCallback,
+} from "../groundline";
 
 /**
  * Animation configuration for a character
@@ -21,7 +25,7 @@ export interface CharacterAnimConfig {
 
 /**
  * Base character class for point-and-click adventures.
- * Handles: click-to-move, animations, walking.
+ * Handles: click-to-move, animations, walking, ground line following.
  */
 export class Character extends GameObjects.Sprite {
 	protected characterId: string;
@@ -31,6 +35,11 @@ export class Character extends GameObjects.Sprite {
 	protected animConfig: CharacterAnimConfig;
 	protected onArrivalResolve: (() => void) | null = null;
 	protected facesLeft: boolean;
+
+	/** Base scale before any perspective adjustment */
+	protected baseScale: number;
+	/** Callback for ground line position updates (optional) */
+	protected positionCallback: PositionUpdateCallback | null = null;
 
 	constructor(
 		scene: Scene,
@@ -46,6 +55,7 @@ export class Character extends GameObjects.Sprite {
 		this.characterId = id || texture;
 		this.animConfig = animConfig;
 		this.facesLeft = animConfig.facesLeft ?? false;
+		this.baseScale = scale;
 
 		// Auto-register with editor
 		registerWithEditor(
@@ -55,6 +65,10 @@ export class Character extends GameObjects.Sprite {
 			this,
 			0x06b6d4,
 		);
+
+		// Try to register with ground line (returns undefined if none)
+		this.positionCallback =
+			registerWithGroundLine(scene, this.characterId, this, scale) ?? null;
 
 		// Add to scene
 		scene.add.existing(this);
@@ -73,6 +87,15 @@ export class Character extends GameObjects.Sprite {
 
 		// Start with idle
 		this.play(this.animConfig.idle.key, true);
+
+		// Apply initial ground line position
+		if (this.positionCallback) {
+			const { y: groundY, scale: groundScale } = this.positionCallback(x);
+			this.y = groundY;
+			if (groundScale !== undefined) {
+				this.setScale(groundScale);
+			}
+		}
 	}
 
 	protected createAnimations(): void {
@@ -167,6 +190,15 @@ export class Character extends GameObjects.Sprite {
 	preUpdate(time: number, delta: number): void {
 		super.preUpdate(time, delta);
 
+		// Apply ground line position (even when not moving, for editor sync)
+		if (this.positionCallback) {
+			const { y, scale } = this.positionCallback(this.x);
+			this.y = y;
+			if (scale !== undefined) {
+				this.setScale(scale);
+			}
+		}
+
 		if (!this.isMoving || this.targetX === null) {
 			return;
 		}
@@ -197,11 +229,29 @@ export class Character extends GameObjects.Sprite {
 		this.moveSpeed = speed;
 	}
 
+	/**
+	 * Set position callback manually (for late binding or custom behavior)
+	 */
+	public setPositionCallback(callback: PositionUpdateCallback | null): void {
+		this.positionCallback = callback;
+	}
+
+	/**
+	 * Get the base scale (before perspective adjustment)
+	 */
+	public getBaseScale(): number {
+		return this.baseScale;
+	}
+
 	// ===========================================================================
 	// Getters
 	// ===========================================================================
 
 	public getIsMoving(): boolean {
 		return this.isMoving;
+	}
+
+	public getCharacterId(): string {
+		return this.characterId;
 	}
 }

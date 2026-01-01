@@ -1,4 +1,5 @@
 import type { Scene } from "phaser";
+import type { GroundLineManager } from "../groundline";
 import type { Hotspot } from "../hotspots/Hotspot";
 import { DragController } from "./DragController";
 import { EditorRenderer } from "./EditorRenderer";
@@ -58,6 +59,17 @@ export class HotspotEditor {
 	private selection: SelectionManager;
 	private drag: DragController;
 
+	// Ground line integration
+	private groundLineManager?: GroundLineManager;
+	private groundLineDrag: {
+		active: boolean;
+		pointIndex: number;
+		startX: number;
+		startY: number;
+		originalX: number;
+		originalY: number;
+	} = { active: false, pointIndex: -1, startX: 0, startY: 0, originalX: 0, originalY: 0 };
+
 	constructor(scene: Scene, callbacks?: EditorCallbacks) {
 		this.scene = scene;
 		this.callbacks = callbacks || {};
@@ -98,15 +110,25 @@ export class HotspotEditor {
 		});
 	}
 
+	/**
+	 * Connect ground line manager for point editing
+	 */
+	setGroundLineManager(manager: GroundLineManager): void {
+		this.groundLineManager = manager;
+	}
+
 	// Toggle editor on/off
 	toggle(): void {
 		this.enabled = !this.enabled;
 		this.renderer.setVisible(this.enabled);
 
+		// Show/hide ground line
+		this.groundLineManager?.setDebugDraw(this.enabled);
+
 		if (this.enabled) {
 			this.setupPointerEvents();
 			this.redraw();
-			console.log("🎨 Editor ON | E=toggle S=copyAll C=copySelected");
+			console.log("🎨 Editor ON | E=toggle S=copyAll C=copySelected A=addPoint Del=removePoint");
 		} else {
 			this.handles.clear();
 			this.renderer.clear();
@@ -125,6 +147,10 @@ export class HotspotEditor {
 			"keydown-C",
 			() => this.enabled && this.selection.current && this.copySelectedJSON(),
 		);
+		// Ground line point shortcuts
+		kb?.on("keydown-A", () => this.enabled && this.addGroundLinePoint());
+		kb?.on("keydown-DELETE", () => this.enabled && this.removeSelectedGroundLinePoint());
+		kb?.on("keydown-BACKSPACE", () => this.enabled && this.removeSelectedGroundLinePoint());
 	}
 
 	private setupPointerEvents(): void {
@@ -151,7 +177,30 @@ export class HotspotEditor {
 			return;
 		}
 
-		// 2. Entities
+		// 2. Ground line points (small circles, check first)
+		if (this.groundLineManager) {
+			const points = this.groundLineManager.getPoints();
+			const POINT_RADIUS = 12; // Hit area radius
+			for (let i = 0; i < points.length; i++) {
+				const p = points[i];
+				const dist = Math.sqrt((wx - p.x) ** 2 + (wy - p.y) ** 2);
+				if (dist <= POINT_RADIUS) {
+					this.select({ type: "groundLinePoint", index: i, x: p.x, y: p.y });
+					this.groundLineDrag = {
+						active: true,
+						pointIndex: i,
+						startX: wx,
+						startY: wy,
+						originalX: p.x,
+						originalY: p.y,
+					};
+					this._clickConsumed = true;
+					return;
+				}
+			}
+		}
+
+		// 3. Entities
 		for (const e of this.entities) {
 			const b = getEntityBounds(e);
 			if (wx >= b.x && wx <= b.x + b.w && wy >= b.y && wy <= b.y + b.h) {
@@ -162,7 +211,7 @@ export class HotspotEditor {
 			}
 		}
 
-		// 3. Hotspots
+		// 4. Hotspots
 		for (const h of this.hotspots) {
 			if (h.bounds.contains(wx, wy)) {
 				this.select({ type: "hotspot", hotspot: h });
@@ -179,17 +228,28 @@ export class HotspotEditor {
 	};
 
 	private onPointerMove = (pointer: Phaser.Input.Pointer): void => {
-		if (!this.drag.isActive || !this.selection.current) return;
-
 		const cam = this.scene.cameras.main;
 		const wx = pointer.x + cam.scrollX;
 		const wy = pointer.y + cam.scrollY;
 
+		// Handle ground line point drag
+		if (this.groundLineDrag.active && this.groundLineManager) {
+			const dx = wx - this.groundLineDrag.startX;
+			const dy = wy - this.groundLineDrag.startY;
+			const newX = this.groundLineDrag.originalX + dx;
+			const newY = this.groundLineDrag.originalY + dy;
+			this.groundLineManager.movePoint(this.groundLineDrag.pointIndex, newX, newY);
+			return;
+		}
+
+		// Handle entity/hotspot drag
+		if (!this.drag.isActive || !this.selection.current) return;
 		this.drag.apply(wx, wy, this.selection.current);
 		this.redraw();
 	};
 
 	private onPointerUp = (): void => {
+		this.groundLineDrag.active = false;
 		this.drag.end();
 	};
 
@@ -243,7 +303,7 @@ export class HotspotEditor {
 	}
 
 	copyAllJSON(): void {
-		const data = {
+		const data: Record<string, unknown> = {
 			hotspots: this.hotspots.map((h) => ({
 				id: h.id,
 				x: h.bounds.x,
@@ -262,6 +322,17 @@ export class HotspotEditor {
 				]),
 			),
 		};
+
+		// Include ground line if present
+		if (this.groundLineManager?.hasGroundLine()) {
+			data.groundLine = {
+				points: this.groundLineManager.getPoints().map((p) => ({
+					x: Math.round(p.x),
+					y: Math.round(p.y),
+				})),
+			};
+		}
+
 		const json = JSON.stringify(data, null, 2);
 		navigator.clipboard
 			.writeText(json)
@@ -282,6 +353,31 @@ export class HotspotEditor {
 	 */
 	setCallbacks(callbacks: EditorCallbacks): void {
 		this.callbacks = { ...this.callbacks, ...callbacks };
+	}
+
+	// Ground line point operations
+	private addGroundLinePoint(): void {
+		if (!this.groundLineManager) return;
+
+		const pointer = this.scene.input.activePointer;
+		const cam = this.scene.cameras.main;
+		const wx = pointer.x + cam.scrollX;
+		const wy = pointer.y + cam.scrollY;
+
+		const newIndex = this.groundLineManager.addPoint(wx, wy);
+		const points = this.groundLineManager.getPoints();
+		const p = points[newIndex];
+		this.select({ type: "groundLinePoint", index: newIndex, x: p.x, y: p.y });
+		console.log(`📍 Added ground line point ${newIndex} at (${Math.round(wx)}, ${Math.round(wy)})`);
+	}
+
+	private removeSelectedGroundLinePoint(): void {
+		const sel = this.selection.current;
+		if (!sel || sel.type !== "groundLinePoint" || !this.groundLineManager) return;
+
+		this.groundLineManager.removePoint(sel.index);
+		this.select(null);
+		console.log(`🗑️ Removed ground line point ${sel.index}`);
 	}
 
 	destroy(): void {

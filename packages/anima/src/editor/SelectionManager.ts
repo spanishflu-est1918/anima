@@ -44,6 +44,7 @@ export class SelectionManager {
 		} else if (this.selected.type === "entity") {
 			return getEntityBounds(this.selected.entity);
 		}
+		// Ground line points don't have bounds for resize handles
 		return null;
 	}
 
@@ -77,7 +78,7 @@ export class SelectionManager {
 					2,
 				),
 			};
-		} else {
+		} else if (this.selected.type === "entity") {
 			const e = this.selected.entity;
 			info = {
 				id: e.id,
@@ -97,6 +98,18 @@ export class SelectionManager {
 					null,
 					2,
 				),
+			};
+		} else {
+			// Ground line point
+			const { index, x, y } = this.selected;
+			info = {
+				id: `point-${index}`,
+				name: `Ground Line Point ${index}`,
+				x: Math.round(x),
+				y: Math.round(y),
+				width: 0,
+				height: 0,
+				json: JSON.stringify({ index, x: Math.round(x), y: Math.round(y) }, null, 2),
 			};
 		}
 
@@ -134,6 +147,9 @@ export class SelectionManager {
 				null,
 				2,
 			);
+		} else if (this.selected.type === "groundLinePoint") {
+			const { index, x, y } = this.selected;
+			return JSON.stringify({ index, x, y }, null, 2);
 		}
 		return null;
 	}
