@@ -18,7 +18,8 @@ export interface Bounds {
 // Selection types
 export type Selectable =
 	| { type: "hotspot"; hotspot: Hotspot }
-	| { type: "entity"; entity: RegisteredEntity };
+	| { type: "entity"; entity: RegisteredEntity }
+	| { type: "groundLinePoint"; index: number; x: number; y: number };
 
 export interface SelectedInfo {
 	id: string;

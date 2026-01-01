@@ -1,5 +1,6 @@
 import { Scene } from "phaser";
 import { type EditorCallbacks, HotspotEditor } from "../editor";
+import { type GroundLineConfig, GroundLineManager } from "../groundline";
 
 /**
  * Parallax layer configuration
@@ -25,11 +26,13 @@ export interface SceneConfig {
 	playerLeftBoundary?: number;
 	playerRightBoundary?: number;
 	playerSpeed?: number;
+	/** Optional ground line configuration for walking path */
+	groundLine?: GroundLineConfig;
 }
 
 /**
  * Base scene for point-and-click adventure games.
- * Provides: parallax backgrounds, edge scrolling, and scene transition helpers.
+ * Provides: parallax backgrounds, ground line, edge scrolling, and scene transition helpers.
  */
 export abstract class BaseScene extends Scene {
 	// Parallax layers
@@ -48,6 +51,9 @@ export abstract class BaseScene extends Scene {
 
 	// Input blocking
 	protected inputBlocked = false;
+
+	// Ground line manager (optional)
+	protected groundLineManager?: GroundLineManager;
 
 	// Editor
 	protected editor?: HotspotEditor;
@@ -72,8 +78,21 @@ export abstract class BaseScene extends Scene {
 		// Disable browser context menu
 		this.input.mouse?.disableContextMenu();
 
+		// Create ground line manager BEFORE editor (so characters can register when created)
+		if (this.config.groundLine) {
+			this.groundLineManager = new GroundLineManager(
+				this,
+				this.config.groundLine,
+			);
+		}
+
 		// Create editor (auto-registration happens when Characters/Hotspots are created)
 		this.editor = new HotspotEditor(this, this.editorCallbacks);
+
+		// Connect editor to ground line manager
+		if (this.groundLineManager) {
+			this.editor.setGroundLineManager(this.groundLineManager);
+		}
 	}
 
 	// ===========================================================================
@@ -240,6 +259,7 @@ export abstract class BaseScene extends Scene {
 	shutdown(): void {
 		this.parallaxLayers.clear();
 		this.parallaxConfigs.clear();
+		this.groundLineManager?.destroy();
 		this.editor?.destroy();
 	}
 
@@ -264,5 +284,12 @@ export abstract class BaseScene extends Scene {
 	 */
 	public getEditor(): HotspotEditor | undefined {
 		return this.editor;
+	}
+
+	/**
+	 * Get the ground line manager
+	 */
+	public getGroundLineManager(): GroundLineManager | undefined {
+		return this.groundLineManager;
 	}
 }

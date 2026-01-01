@@ -22,6 +22,18 @@ export class TestScene extends BaseScene {
 		playerLeftBoundary: 100,
 		playerRightBoundary: 3900,
 		playerSpeed: 300,
+		groundLine: {
+			points: [
+				{ x: 100, y: 920 },
+				{ x: 2000, y: 900 },
+				{ x: 3900, y: 910 },
+			],
+			perspectiveScale: {
+				foregroundY: 920,
+				backgroundY: 880,
+				minScale: 0.85,
+			},
+		},
 	};
 
 	private player!: Character;
