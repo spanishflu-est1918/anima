@@ -70,8 +70,8 @@ export class HotspotEditor {
 		originalY: number;
 	} = { active: false, pointIndex: -1, startX: 0, startY: 0, originalX: 0, originalY: 0 };
 
-	// Track dragged entity for ground line suspension
-	private draggedEntityId: string | null = null;
+	// Track all suspended entities (to resume when editor closes)
+	private suspendedEntities: Set<string> = new Set();
 
 	constructor(scene: Scene, callbacks?: EditorCallbacks) {
 		this.scene = scene;
@@ -136,6 +136,11 @@ export class HotspotEditor {
 			this.handles.clear();
 			this.renderer.clear();
 			this.selection.clear();
+			// Resume all suspended entities when editor closes
+			for (const id of this.suspendedEntities) {
+				this.groundLineManager?.resumeCharacter(id);
+			}
+			this.suspendedEntities.clear();
 			console.log("🎨 Editor OFF");
 		}
 
@@ -209,9 +214,9 @@ export class HotspotEditor {
 			if (wx >= b.x && wx <= b.x + b.w && wy >= b.y && wy <= b.y + b.h) {
 				this.select({ type: "entity", entity: e });
 				this.drag.startMove(wx, wy, b);
-				// Suspend ground line updates while dragging
-				this.draggedEntityId = e.id;
+				// Suspend ground line updates - stays suspended until editor closes
 				this.groundLineManager?.suspendCharacter(e.id);
+				this.suspendedEntities.add(e.id);
 				this._clickConsumed = true;
 				return;
 			}
@@ -257,12 +262,7 @@ export class HotspotEditor {
 	private onPointerUp = (): void => {
 		this.groundLineDrag.active = false;
 		this.drag.end();
-
-		// Resume ground line updates for dragged entity
-		if (this.draggedEntityId) {
-			this.groundLineManager?.resumeCharacter(this.draggedEntityId);
-			this.draggedEntityId = null;
-		}
+		// Ground line stays suspended - character keeps its editor position
 	};
 
 	private startResize(
