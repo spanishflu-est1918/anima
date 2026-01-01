@@ -70,6 +70,9 @@ export class HotspotEditor {
 		originalY: number;
 	} = { active: false, pointIndex: -1, startX: 0, startY: 0, originalX: 0, originalY: 0 };
 
+	// Track dragged entity for ground line suspension
+	private draggedEntityId: string | null = null;
+
 	constructor(scene: Scene, callbacks?: EditorCallbacks) {
 		this.scene = scene;
 		this.callbacks = callbacks || {};
@@ -206,6 +209,9 @@ export class HotspotEditor {
 			if (wx >= b.x && wx <= b.x + b.w && wy >= b.y && wy <= b.y + b.h) {
 				this.select({ type: "entity", entity: e });
 				this.drag.startMove(wx, wy, b);
+				// Suspend ground line updates while dragging
+				this.draggedEntityId = e.id;
+				this.groundLineManager?.suspendCharacter(e.id);
 				this._clickConsumed = true;
 				return;
 			}
@@ -251,6 +257,12 @@ export class HotspotEditor {
 	private onPointerUp = (): void => {
 		this.groundLineDrag.active = false;
 		this.drag.end();
+
+		// Resume ground line updates for dragged entity
+		if (this.draggedEntityId) {
+			this.groundLineManager?.resumeCharacter(this.draggedEntityId);
+			this.draggedEntityId = null;
+		}
 	};
 
 	private startResize(
