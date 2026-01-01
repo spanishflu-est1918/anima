@@ -1,12 +1,12 @@
 import {
 	BaseScene,
 	Character,
-	Hotspot,
-	RadialMenu,
-	SpeechText,
-	type SceneConfig,
 	type CharacterAnimConfig,
+	Hotspot,
 	type HotspotVerb,
+	RadialMenu,
+	type SceneConfig,
+	SpeechText,
 } from "@anima/engine";
 
 /**
@@ -18,7 +18,7 @@ export class TestScene extends BaseScene {
 		sceneName: "TestScene",
 		displayName: "TEST ALLEY",
 		worldWidth: 4000,
-		playerSpawn: { x: 391, y: 904, scale: 0.869 },
+		playerSpawn: { x: 164, y: 1027, scale: 0.85 },
 		playerLeftBoundary: 100,
 		playerRightBoundary: 3900,
 		playerSpeed: 300,
@@ -166,20 +166,37 @@ export class TestScene extends BaseScene {
 
 	private handleDoorInteract(verb: HotspotVerb): void {
 		if (verb === "look") {
-			this.showDialogue("ASHLEY", "A rusty metal door. Looks like an exit.", "#F472B6");
+			this.showDialogue(
+				"ASHLEY",
+				"A rusty metal door. Looks like an exit.",
+				"#F472B6",
+			);
 		} else if (verb === "use") {
-			this.showDialogue("ASHLEY", "It's locked. I need to find another way.", "#F472B6");
+			this.showDialogue(
+				"ASHLEY",
+				"It's locked. I need to find another way.",
+				"#F472B6",
+			);
 		}
 	}
 
 	private handleGraffitiInteract(verb: HotspotVerb): void {
 		if (verb === "look") {
-			this.showDialogue("ASHLEY", "This street art is pretty cool. Someone put a lot of work into this.", "#F472B6");
+			this.showDialogue(
+				"ASHLEY",
+				"This street art is pretty cool. Someone put a lot of work into this.",
+				"#F472B6",
+			);
 		}
 	}
 
 	private showDialogue(speaker: string, text: string, color: string): void {
-		this.speechText.show(speaker, text, this.player as unknown as Phaser.GameObjects.Sprite, color);
+		this.speechText.show(
+			speaker,
+			text,
+			this.player as unknown as Phaser.GameObjects.Sprite,
+			color,
+		);
 
 		// Hide after 3 seconds or on click
 		this.time.delayedCall(3000, () => {

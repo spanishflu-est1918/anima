@@ -1,8 +1,8 @@
 import { GameObjects, type Scene } from "phaser";
 import { registerWithEditor } from "../editor";
 import {
-	registerWithGroundLine,
 	type PositionUpdateCallback,
+	registerWithGroundLine,
 } from "../groundline";
 
 /**
