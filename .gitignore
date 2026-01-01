@@ -35,3 +35,4 @@ packages/sprite-tools/sources/
 # Turso
 *.db
 *.db-journal
+.env

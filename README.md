@@ -100,6 +100,30 @@ Extracted from the Will Stancil game. A personal framework for building narrativ
 
 The secret sauce. AI-driven asset generation from prompts to playable sprites.
 
+### CRITICAL: ULTRA-FAITHFUL TO ASHLEY'S ART
+
+**Ashley's paintings ARE the game's visual identity. Non-negotiable.**
+
+AI generation must reproduce her style EXACTLY - not "inspired by", not "similar to". If AI can't match it perfectly, we extract directly from her paintings or don't use AI.
+
+**Ashley's Style (sacred, do not dilute):**
+- 1930s Fleischer "Rubber Hose" + Tibetan Thangka fusion
+- Clean black ink outlines, consistent weight
+- Opaque vibrant fills (acrylic/gouache look, NOT digital gradient)
+- Specific color relationships (blue mustache = Tibetan shape in clown color)
+- Canvas texture feel
+- The linework has WEIGHT and CONFIDENCE
+- Features are SOFT and PLIABLE, not rigid
+- The weird/sacred/funny energy - this is NOT generic cartoon
+
+**If AI output looks generic: REJECT IT.**
+
+**Fallback approaches when AI fails:**
+1. Extract characters directly from Ashley's paintings (rembg, manual masking)
+2. Use her paintings as actual game assets, process minimally
+3. Have Ashley paint what's needed
+4. Don't ship until it looks right
+
 ### Pipeline Overview
 
 ```
@@ -154,21 +178,72 @@ Auto-detects character positions, crops, scales uniformly, pads with green.
 
 ### 3. Video Generation
 
-**Hedra** - Talking/lip-sync animations:
-```bash
-python scripts/hedra-video.py --image character.png --audio dialogue.mp3 --output talking.mp4
-```
-- Best for: dialogue animations, facial expressions
-- Input: 9:16 portrait + audio
-- Output: lip-synced video on green screen
+All video generation uses `hedra-video.py` which wraps multiple models through Hedra's unified API.
 
-**Veo 3.1** - Motion/action animations:
+**Setup:**
 ```bash
-pnpm tsx scripts/veo-video.ts --image character.png --prompt "walking left" --output walk.mp4
+export HEDRA_API_KEY="your_key"  # Get from hedra.com
+pip install requests python-dotenv
 ```
-- Best for: walk cycles, idle animations, actions
-- Input: character image + motion prompt
-- Output: animated video on green screen
+
+**Available Models:**
+
+| Model | Use Case | Cost | Notes |
+|-------|----------|------|-------|
+| `hedra-character-3` | Lip-sync talking | - | Requires `--audio` |
+| `kling-2.5-i2v` | Motion/idle (cheap) | 10 cr/s | Good for tests |
+| `kling-2.6-pro-i2v` | Motion/idle (quality) | 20 cr/s | Better details |
+| `veo-3-fast-i2v` | Motion/idle (fast) | 20 cr/s | Google Veo |
+| `sora-2-pro-i2v` | Motion/idle (best) | 70 cr/s | **Best quality**, 4/8/12s only |
+
+**Lip-sync (talking animations):**
+```bash
+# Requires audio file - auto-detects duration
+python scripts/hedra-video.py \
+  --image ash-idle-clean.png \
+  --audio dialogue.mp3 \
+  --prompt "A cheerful clown girl talking" \
+  --output ash-talking.mp4
+```
+
+**Image-to-Video (motion animations):**
+```bash
+# Idle animation with Kling (cheap, good for testing)
+python scripts/hedra-video.py \
+  --image ash-idle-clean.png \
+  --prompt "Character breathing subtly, slight sway, blinking" \
+  --model kling-2.5-i2v \
+  --duration 4 \
+  --output ash-idle.mp4
+
+# Walk cycle with Sora 2 Pro (best quality)
+python scripts/hedra-video.py \
+  --image skyler-idle-clean.png \
+  --prompt "Character walking to the left, full body visible, smooth motion" \
+  --model sora-2-pro-i2v \
+  --duration 4 \
+  --output skyler-walk.mp4
+```
+
+**Sora 2 Pro Tips:**
+- Durations: 4, 8, or 12 seconds ONLY
+- Avoid aggressive words: use "gesture" not "attack", "motion" not "fight"
+- Best for: cinematic quality, smooth motion, production assets
+
+**Veo 3.1 Direct** (Google API, alternative):
+```bash
+# Requires GOOGLE_API_KEY
+pnpm tsx scripts/veo-video.ts \
+  --image character.png \
+  --prompt "walking left" \
+  --output walk.mp4
+```
+
+**Check credits:**
+```bash
+python scripts/hedra-video.py --check-credits
+python scripts/hedra-video.py --list-models
+```
 
 ### 4. Video to Sprite Sheet
 
@@ -235,8 +310,12 @@ Compares silhouettes - adjust scale until tops align.
 |---------|---------|------------|
 | Gemini (Nano Banana) | Image generation (style matching) | API calls |
 | GPT-5 (OpenAI) | Image generation (photorealism) | ChatGPT Pro / API |
-| Hedra | Lip-sync video | Credits/subscription |
-| Veo 3.1 | Motion video | API calls |
+| Hedra API | Video generation (unified) | Credits - see [hedra.com](https://hedra.com) |
+| ↳ Hedra Character 3 | Lip-sync talking videos | Included in Hedra |
+| ↳ Kling 2.5/2.6 | Motion video (budget) | 10-20 cr/s |
+| ↳ Veo 3 Fast | Motion video (Google) | 20 cr/s |
+| ↳ Sora 2 Pro | Motion video (best quality) | 70 cr/s |
+| Veo 3.1 Direct | Motion video (Google API) | API calls |
 | ElevenLabs | Voice synthesis | Characters/month |
 
 ---

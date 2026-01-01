@@ -13,8 +13,10 @@ description: Extract animated sprites from AI-generated videos. Use when creatin
 1. GENERATE VIDEO    → Veo 3.1, grey background, NO SHADOWS
 2. EXTRACT FRAMES    → ffmpeg
 3. REMOVE BACKGROUND → CHROMA KEY (not rembg!)
-4. FIND LOOP         → LoopyCut or manual
-5. ORGANIZE          → intro/ + loop/ folders
+4. TRIM TO CONTENT   → Global bounding box
+5. FIND LOOP         → LoopyCut or manual
+6. CREATE SPRITESHEET → montage + JSON metadata
+7. ORGANIZE          → intro/ + loop/ folders
 ```
 
 ## Why Chroma Key > rembg
@@ -89,7 +91,54 @@ for f in sorted(os.listdir("frames")):
         chroma_key(f"frames/{f}", f"sprites/{f}")
 ```
 
-### 4. Find Loop Points
+### 4. Trim to Content
+
+After chroma key, frames have transparent padding. Trim all frames to the same global bounding box so the sprite size matches the visible content.
+
+```python
+from PIL import Image
+import os
+
+def get_content_bbox(img):
+    """Get bounding box of non-transparent pixels"""
+    alpha = img.split()[-1]
+    return alpha.getbbox()
+
+def trim_frames(input_dir, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    files = sorted([f for f in os.listdir(input_dir) if f.endswith('.png')])
+
+    # Pass 1: Find global bounding box across ALL frames
+    global_bbox = None
+    for f in files:
+        img = Image.open(f"{input_dir}/{f}")
+        bbox = get_content_bbox(img)
+        if bbox:
+            if global_bbox is None:
+                global_bbox = bbox
+            else:
+                global_bbox = (
+                    min(global_bbox[0], bbox[0]),
+                    min(global_bbox[1], bbox[1]),
+                    max(global_bbox[2], bbox[2]),
+                    max(global_bbox[3], bbox[3])
+                )
+
+    print(f"Global bounds: {global_bbox}")
+    width = global_bbox[2] - global_bbox[0]
+    height = global_bbox[3] - global_bbox[1]
+    print(f"Frame size: {width}x{height}")
+
+    # Pass 2: Crop all frames to global bounds
+    for f in files:
+        img = Image.open(f"{input_dir}/{f}")
+        cropped = img.crop(global_bbox)
+        cropped.save(f"{output_dir}/{f}")
+
+trim_frames("sprites", "trimmed")
+```
+
+### 5. Find Loop Points
 
 Use **LoopyCut** or identify manually by watching the video:
 
@@ -101,7 +150,60 @@ AI videos typically have:
 - **Intro**: Wind-up animation (frames 1-N)
 - **Loop**: Repeatable cycle (frames N+1 to end)
 
-### 5. Organize Output
+### 6. Create Spritesheet
+
+Combine trimmed frames into a single spritesheet with JSON metadata for Phaser:
+
+```python
+from PIL import Image
+import json
+import os
+import math
+
+def create_spritesheet(input_dir, output_name, fps=24):
+    files = sorted([f for f in os.listdir(input_dir) if f.endswith('.png')])
+    if not files:
+        return
+
+    # Get frame dimensions from first frame
+    sample = Image.open(f"{input_dir}/{files[0]}")
+    frame_w, frame_h = sample.size
+    frame_count = len(files)
+
+    # Calculate grid (single row for simple spritesheets)
+    cols = frame_count
+    rows = 1
+
+    # Create spritesheet
+    sheet = Image.new('RGBA', (frame_w * cols, frame_h * rows), (0, 0, 0, 0))
+    for i, f in enumerate(files):
+        img = Image.open(f"{input_dir}/{f}")
+        x = (i % cols) * frame_w
+        y = (i // cols) * frame_h
+        sheet.paste(img, (x, y))
+
+    sheet.save(f"{output_name}.png")
+
+    # Create JSON metadata
+    meta = {
+        "name": output_name,
+        "frameWidth": frame_w,
+        "frameHeight": frame_h,
+        "frameCount": frame_count,
+        "cols": cols,
+        "rows": rows,
+        "fps": fps
+    }
+    with open(f"{output_name}.json", 'w') as f:
+        json.dump(meta, f, indent=2)
+
+    print(f"Created {output_name}.png ({frame_w * cols}x{frame_h * rows})")
+    print(f"Frame size: {frame_w}x{frame_h}, {frame_count} frames")
+
+create_spritesheet("trimmed", "character-walk", fps=24)
+```
+
+### 7. Organize Output
 
 ```
 sprites/
@@ -127,25 +229,47 @@ Adjust `grey_dist` threshold if background color differs from 130,130,130.
 
 ## Phaser Integration
 
+The JSON metadata contains the exact frame dimensions - use it:
+
 ```javascript
-// Load as atlas or individual frames
-this.anims.create({
-  key: 'idle-intro',
-  frames: introFrames,
-  frameRate: 24,
-  repeat: 0
-});
+// In preload - load JSON first, then spritesheet with correct dimensions
+preload() {
+  this.load.json('ashley-meta', 'assets/sprites/ashley.json');
+}
 
-this.anims.create({
-  key: 'idle-loop',
-  frames: loopFrames,
-  frameRate: 24,
-  repeat: -1
-});
+create() {
+  const meta = this.cache.json.get('ashley-meta');
 
-// Play intro then loop
-sprite.play('idle-intro').once('animationcomplete', () => {
-  sprite.play('idle-loop');
+  // Now load spritesheet with dimensions from JSON
+  this.load.spritesheet('ashley', 'assets/sprites/ashley.png', {
+    frameWidth: meta.frameWidth,
+    frameHeight: meta.frameHeight
+  });
+
+  this.load.once('complete', () => {
+    // Create animation using fps from metadata
+    this.anims.create({
+      key: 'ashley-walk',
+      frames: this.anims.generateFrameNumbers('ashley', {
+        start: 0,
+        end: meta.frameCount - 1
+      }),
+      frameRate: meta.fps,
+      repeat: -1
+    });
+  });
+
+  this.load.start();
+}
+```
+
+Or simpler - just reference the JSON values when writing your scene:
+
+```javascript
+// ashley.json says: frameWidth: 301, frameHeight: 467, fps: 24
+this.load.spritesheet('ashley', 'assets/sprites/ashley.png', {
+  frameWidth: 301,  // from JSON
+  frameHeight: 467  // from JSON
 });
 ```
 
