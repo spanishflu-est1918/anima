@@ -175,9 +175,12 @@ export class InventoryManager {
 	 * Spend money.
 	 * Delegates to GameState.
 	 * @param amount Amount to spend
-	 * @returns true if successful, false if insufficient funds
+	 * @returns true if successful, false if insufficient funds or negative amount
 	 */
 	public spendMoney(amount: number): boolean {
+		if (amount < 0) {
+			return false;
+		}
 		return GameState.getInstance().spendMoney(amount);
 	}
 
@@ -212,6 +215,11 @@ export class InventoryManager {
 		}
 
 		if (!resultId) {
+			return null;
+		}
+
+		// Validate result item exists before modifying inventory
+		if (!this.itemDefinitions.has(resultId)) {
 			return null;
 		}
 

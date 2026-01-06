@@ -5,22 +5,20 @@ import { SpeechText } from "../dialogue";
 import { type EditorCallbacks, HotspotEditor } from "../editor";
 import { type GroundLineConfig, GroundLineManager } from "../groundline";
 import { Hotspot, type HotspotConfig } from "../hotspots";
-import { IrisTransition } from "../transitions";
 import { UIState } from "../ui";
-import { ScenePreloadManager } from "./ScenePreloadManager";
+import { SceneCamera, type CameraConfig } from "./SceneCamera";
+import {
+	SceneParallax,
+	type ParallaxLayerConfig,
+} from "./SceneParallax";
+import {
+	SceneTransitions,
+	type TransitionOptions,
+} from "./SceneTransitions";
 
-/**
- * Parallax layer configuration
- */
-export interface ParallaxLayerConfig {
-	key: string;
-	scrollFactor: number; // 0 = fixed, 1 = moves with camera
-	y: number;
-	depth: number;
-	tileSprite?: boolean; // Use TileSprite for seamless scrolling
-	height?: number;
-	origin?: { x: number; y: number };
-}
+// Re-export types for backward compatibility
+export type { ParallaxLayerConfig } from "./SceneParallax";
+export type { TransitionOptions } from "./SceneTransitions";
 
 /**
  * Player configuration for createPlayer
@@ -31,15 +29,6 @@ export interface PlayerConfig {
 	scale?: number;
 	spriteKey: string;
 	animConfig?: CharacterAnimConfig;
-}
-
-/**
- * Transition options for transitionToScene
- */
-export interface TransitionOptions {
-	data?: Record<string, unknown>;
-	duration?: number;
-	skipTransition?: boolean;
 }
 
 /**
@@ -62,22 +51,19 @@ export interface SceneConfig {
  * Provides: parallax backgrounds, ground line, edge scrolling, and scene transition helpers.
  */
 export abstract class BaseScene extends Scene {
-	// Parallax layers
-	protected parallaxLayers: Map<
-		string,
-		Phaser.GameObjects.Image | Phaser.GameObjects.TileSprite
-	> = new Map();
-	protected parallaxConfigs: Map<string, ParallaxLayerConfig> = new Map();
+	// Helper modules (composition)
+	protected sceneCamera!: SceneCamera;
+	protected sceneParallax!: SceneParallax;
+	protected sceneTransitions!: SceneTransitions;
 
 	// World dimensions
 	protected worldWidth = 0;
 
-	// Edge scrolling
-	protected readonly EDGE_ZONE = 100;
-	protected readonly SCROLL_SPEED = 12;
-
 	// Input blocking
 	protected inputBlocked = false;
+
+	// Input listener reference for cleanup
+	private pointerDownListener?: (pointer: Phaser.Input.Pointer) => void;
 
 	// Ground line manager (optional)
 	protected groundLineManager?: GroundLineManager;
@@ -89,46 +75,19 @@ export abstract class BaseScene extends Scene {
 	// Scene configuration (set by child class)
 	protected abstract readonly config: SceneConfig;
 
-	// ===========================================================================
-	// EXPANDED API - Player Character
-	// ===========================================================================
-
-	/** Player character instance */
+	// Player character instance
 	protected player?: Character;
 
-	// ===========================================================================
-	// EXPANDED API - Dialogue Systems
-	// ===========================================================================
-
-	/** Speech text for floating dialogue */
+	// Speech text for floating dialogue
 	protected speechText?: SpeechText;
 
-	// ===========================================================================
-	// EXPANDED API - Sound Manager
-	// ===========================================================================
-
-	/** Scene sound manager */
+	// Scene sound manager
 	protected soundManager?: SceneSoundManager;
 
-	// ===========================================================================
-	// EXPANDED API - Scene Transitions
-	// ===========================================================================
-
-	/** Iris transition effect */
-	protected irisTransition?: IrisTransition;
-
-	// ===========================================================================
-	// EXPANDED API - Hotspot Management
-	// ===========================================================================
-
-	/** Active hotspots in the scene */
+	// Active hotspots in the scene
 	protected hotspots: Hotspot[] = [];
 
-	// ===========================================================================
-	// EXPANDED API - Debug Mode
-	// ===========================================================================
-
-	/** Debug mode flag */
+	// Debug mode flag
 	protected debugMode: boolean = false;
 
 	/**
@@ -138,11 +97,20 @@ export abstract class BaseScene extends Scene {
 	create(): void {
 		this.worldWidth = this.config.worldWidth;
 
+		// Initialize helper modules
+		const cameraConfig: CameraConfig = {
+			worldWidth: this.worldWidth,
+			worldHeight: 1080,
+		};
+		this.sceneCamera = new SceneCamera(this, cameraConfig);
+		this.sceneParallax = new SceneParallax(this);
+		this.sceneTransitions = new SceneTransitions(this);
+
 		// Set up physics world bounds
 		this.physics.world.setBounds(0, 0, this.worldWidth, 1080);
 
 		// Set up camera bounds
-		this.cameras.main.setBounds(0, 0, this.worldWidth, 1080);
+		this.sceneCamera.setupBounds();
 
 		// Disable browser context menu
 		this.input.mouse?.disableContextMenu();
@@ -165,7 +133,7 @@ export abstract class BaseScene extends Scene {
 	}
 
 	// ===========================================================================
-	// Parallax Layers
+	// Parallax Layers (delegates to SceneParallax)
 	// ===========================================================================
 
 	/**
@@ -174,39 +142,20 @@ export abstract class BaseScene extends Scene {
 	protected addParallaxLayer(
 		config: ParallaxLayerConfig,
 	): Phaser.GameObjects.Image | Phaser.GameObjects.TileSprite {
-		const { key, scrollFactor, y, depth, tileSprite, height, origin } = config;
-
-		let layer: Phaser.GameObjects.Image | Phaser.GameObjects.TileSprite;
-
-		if (tileSprite && height) {
-			const screenWidth = this.cameras.main.width;
-			layer = this.add.tileSprite(screenWidth / 2, y, screenWidth, height, key);
-			layer.setOrigin(0.5, origin?.y ?? 0);
-			layer.setScrollFactor(0);
-		} else {
-			layer = this.add.image(0, y, key);
-			layer.setOrigin(origin?.x ?? 0, origin?.y ?? 0);
-			layer.setScrollFactor(scrollFactor);
+		if (!this.sceneParallax) {
+			throw new Error("addParallaxLayer called before create()");
 		}
-
-		layer.setDepth(depth);
-		this.parallaxLayers.set(key, layer);
-		this.parallaxConfigs.set(key, config);
-
-		return layer;
+		return this.sceneParallax.addLayer(config);
 	}
 
 	protected getParallaxLayer(
 		key: string,
 	): Phaser.GameObjects.Image | Phaser.GameObjects.TileSprite | undefined {
-		return this.parallaxLayers.get(key);
+		return this.sceneParallax?.getLayer(key);
 	}
 
 	protected setLayerTexture(layerKey: string, newTextureKey: string): void {
-		const layer = this.parallaxLayers.get(layerKey);
-		if (layer) {
-			layer.setTexture(newTextureKey);
-		}
+		this.sceneParallax?.setLayerTexture(layerKey, newTextureKey);
 	}
 
 	/**
@@ -214,47 +163,18 @@ export abstract class BaseScene extends Scene {
 	 * Call this in update().
 	 */
 	protected updateParallaxLayers(): void {
-		const camX = this.cameras.main.scrollX;
-
-		for (const [key, layer] of this.parallaxLayers) {
-			const config = this.parallaxConfigs.get(key);
-			if (
-				config?.tileSprite &&
-				layer instanceof Phaser.GameObjects.TileSprite
-			) {
-				layer.tilePositionX = camX * config.scrollFactor;
-			}
-		}
+		this.sceneParallax?.update(this.cameras.main.scrollX);
 	}
 
 	// ===========================================================================
-	// Edge Scrolling
+	// Edge Scrolling (delegates to SceneCamera)
 	// ===========================================================================
 
 	/**
 	 * Handle edge scrolling - call in update()
 	 */
 	protected handleEdgeScrolling(pointer: Phaser.Input.Pointer): void {
-		const camera = this.cameras.main;
-		const screenWidth = this.scale.width;
-
-		const isTouchDevice = pointer.wasTouch;
-		if (isTouchDevice && !pointer.isDown) return;
-
-		const edgeZone = isTouchDevice ? screenWidth * 0.08 : this.EDGE_ZONE;
-
-		if (pointer.x < edgeZone) {
-			const intensity = 1 - pointer.x / edgeZone;
-			camera.scrollX -= this.SCROLL_SPEED * intensity;
-		} else if (pointer.x > screenWidth - edgeZone) {
-			const intensity = (pointer.x - (screenWidth - edgeZone)) / edgeZone;
-			camera.scrollX += this.SCROLL_SPEED * intensity;
-		}
-
-		camera.scrollX = Math.max(
-			0,
-			Math.min(camera.scrollX, this.worldWidth - screenWidth),
-		);
+		this.sceneCamera.handleEdgeScrolling(pointer);
 	}
 
 	// ===========================================================================
@@ -276,14 +196,14 @@ export abstract class BaseScene extends Scene {
 	}
 
 	// ===========================================================================
-	// Scene Transitions (Legacy)
+	// Scene Transitions (delegates to SceneTransitions)
 	// ===========================================================================
 
 	/**
 	 * Fade in the scene from black
 	 */
 	protected fadeInScene(duration = 500): void {
-		this.cameras.main.fadeIn(duration);
+		this.sceneTransitions.fadeIn(duration);
 	}
 
 	/**
@@ -295,21 +215,56 @@ export abstract class BaseScene extends Scene {
 		duration = 500,
 	): void {
 		this.inputBlocked = true;
-		this.cameras.main.fadeOut(
-			duration,
-			0,
-			0,
-			0,
-			(_cam: unknown, progress: number) => {
-				if (progress === 1) {
-					this.scene.start(sceneKey, data);
-				}
-			},
+		this.sceneTransitions.fadeToScene(sceneKey, data, duration);
+	}
+
+	/**
+	 * Transition to another scene using iris wipe effect
+	 */
+	public async transitionToScene(
+		sceneKey: string,
+		options: TransitionOptions = {},
+	): Promise<void> {
+		// Block input during transition
+		this.inputBlocked = true;
+		await this.sceneTransitions.transitionToScene(
+			sceneKey,
+			options,
+			this.player,
+			this.soundManager,
 		);
 	}
 
+	/**
+	 * Iris in from black at scene start
+	 */
+	public async irisInScene(duration = 600): Promise<void> {
+		await this.sceneTransitions.irisIn(duration, this.player);
+	}
+
+	/**
+	 * Get player head position for iris transitions
+	 * Returns center of screen if no player exists
+	 */
+	public getPlayerHeadPosition(): { x: number; y: number } {
+		if (!this.player) {
+			return {
+				x: this.cameras.main.scrollX + this.cameras.main.width / 2,
+				y: this.cameras.main.scrollY + this.cameras.main.height / 2,
+			};
+		}
+
+		// Player origin is at bottom-center (feet)
+		// Head is roughly at the top of the sprite (~90% up from feet)
+		const headOffset = this.player.displayHeight * 0.9;
+		return {
+			x: this.player.x,
+			y: this.player.y - headOffset,
+		};
+	}
+
 	// ===========================================================================
-	// EXPANDED API - Player Character Methods
+	// Player Character Methods
 	// ===========================================================================
 
 	/**
@@ -358,7 +313,7 @@ export abstract class BaseScene extends Scene {
 	}
 
 	// ===========================================================================
-	// EXPANDED API - Dialogue Systems
+	// Dialogue Systems
 	// ===========================================================================
 
 	/**
@@ -376,7 +331,7 @@ export abstract class BaseScene extends Scene {
 	}
 
 	// ===========================================================================
-	// EXPANDED API - Sound Manager
+	// Sound Manager
 	// ===========================================================================
 
 	/**
@@ -395,20 +350,17 @@ export abstract class BaseScene extends Scene {
 	}
 
 	// ===========================================================================
-	// EXPANDED API - Input Handling
+	// Input Handling
 	// ===========================================================================
 
 	/**
 	 * Set up input handlers for pointer events
 	 */
 	public setupInputHandlers(): void {
-		this.input.on(
-			"pointerdown",
-			(pointer: Phaser.Input.Pointer) => {
-				this.handlePointerDown(pointer);
-			},
-			this,
-		);
+		this.pointerDownListener = (pointer: Phaser.Input.Pointer) => {
+			this.handlePointerDown(pointer);
+		};
+		this.input.on("pointerdown", this.pointerDownListener, this);
 	}
 
 	/**
@@ -420,93 +372,7 @@ export abstract class BaseScene extends Scene {
 	}
 
 	// ===========================================================================
-	// EXPANDED API - Scene Transitions
-	// ===========================================================================
-
-	/**
-	 * Transition to another scene using iris wipe effect
-	 */
-	public async transitionToScene(
-		sceneKey: string,
-		options: TransitionOptions = {},
-	): Promise<void> {
-		const { data, duration = 600, skipTransition = false } = options;
-		const preloadManager = ScenePreloadManager.getInstance();
-
-		// Block input during transition
-		this.inputBlocked = true;
-
-		// Iris out centered on player's head (unless skipped)
-		if (!skipTransition) {
-			this.soundManager?.fadeOutAll(duration);
-
-			const headPos = this.getPlayerHeadPosition();
-			this.irisTransition = new IrisTransition(this);
-
-			// Wait for iris to close
-			await this.irisTransition.irisOut({
-				centerX: headPos.x,
-				centerY: headPos.y,
-				duration,
-			});
-		}
-
-		// Wait for scene assets if not loaded
-		if (!preloadManager.isSceneLoaded(sceneKey)) {
-			UIState.getInstance().showSceneLoading(true);
-
-			try {
-				await preloadManager.waitForSceneWithTimeout(sceneKey, 10000);
-			} catch {
-				// Continue anyway on timeout
-			}
-
-			UIState.getInstance().showSceneLoading(false);
-		}
-
-		// Start the scene
-		this.scene.start(sceneKey, { ...data, _irisIn: !skipTransition });
-	}
-
-	/**
-	 * Iris in from black at scene start
-	 */
-	public async irisInScene(duration = 600): Promise<void> {
-		const headPos = this.getPlayerHeadPosition();
-		this.irisTransition = new IrisTransition(this);
-
-		// Start with closed iris, then open
-		this.irisTransition.drawClosed({ centerX: headPos.x, centerY: headPos.y });
-		await this.irisTransition.irisIn({
-			centerX: headPos.x,
-			centerY: headPos.y,
-			duration,
-		});
-	}
-
-	/**
-	 * Get player head position for iris transitions
-	 * Returns center of screen if no player exists
-	 */
-	public getPlayerHeadPosition(): { x: number; y: number } {
-		if (!this.player) {
-			return {
-				x: this.cameras.main.scrollX + this.cameras.main.width / 2,
-				y: this.cameras.main.scrollY + this.cameras.main.height / 2,
-			};
-		}
-
-		// Player origin is at bottom-center (feet)
-		// Head is roughly at the top of the sprite (~90% up from feet)
-		const headOffset = this.player.displayHeight * 0.9;
-		return {
-			x: this.player.x,
-			y: this.player.y - headOffset,
-		};
-	}
-
-	// ===========================================================================
-	// EXPANDED API - Hotspot Management
+	// Hotspot Management
 	// ===========================================================================
 
 	/**
@@ -534,7 +400,7 @@ export abstract class BaseScene extends Scene {
 	}
 
 	// ===========================================================================
-	// EXPANDED API - UI State
+	// UI State
 	// ===========================================================================
 
 	/**
@@ -545,7 +411,7 @@ export abstract class BaseScene extends Scene {
 	}
 
 	// ===========================================================================
-	// EXPANDED API - Debug Mode
+	// Debug Mode
 	// ===========================================================================
 
 	/**
@@ -573,13 +439,25 @@ export abstract class BaseScene extends Scene {
 	// ===========================================================================
 
 	shutdown(): void {
-		this.parallaxLayers.clear();
-		this.parallaxConfigs.clear();
+		// Remove input listener
+		if (this.pointerDownListener) {
+			this.input.off("pointerdown", this.pointerDownListener, this);
+			this.pointerDownListener = undefined;
+		}
+
+		// Destroy player
+		this.player?.destroy();
+		this.player = undefined;
+
+		// Destroy helper modules
+		this.sceneParallax?.destroy();
+		this.sceneTransitions?.destroy();
+
+		// Destroy managers and subsystems
 		this.groundLineManager?.destroy();
 		this.editor?.destroy();
 		this.soundManager?.destroy();
 		this.speechText?.destroy();
-		this.irisTransition?.destroy();
 
 		// Clear hotspots
 		for (const hotspot of this.hotspots) {

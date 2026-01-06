@@ -115,7 +115,8 @@ export class UIState {
 	}
 
 	public getHoveredHotspot(): HoveredHotspot | null {
-		return this.hoveredHotspot;
+		if (this.hoveredHotspot === null) return null;
+		return { ...this.hoveredHotspot };
 	}
 
 	// Dialogue methods
@@ -141,7 +142,8 @@ export class UIState {
 	}
 
 	public getDialogueContent(): DialogueContent | null {
-		return this.dialogueContent;
+		if (this.dialogueContent === null) return null;
+		return { ...this.dialogueContent };
 	}
 
 	// Inventory methods
@@ -177,7 +179,8 @@ export class UIState {
 	}
 
 	public getSelectedItem(): InventoryItem | null {
-		return this.selectedItem;
+		if (this.selectedItem === null) return null;
+		return { ...this.selectedItem };
 	}
 
 	// Clear both verb and item selection
@@ -218,7 +221,11 @@ export class UIState {
 		};
 
 		for (const subscriber of this.subscribers) {
-			subscriber(snapshot);
+			try {
+				subscriber(snapshot);
+			} catch (error) {
+				console.error("UIState subscriber error:", error);
+			}
 		}
 	}
 }

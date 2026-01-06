@@ -7,6 +7,25 @@ import { Hono } from "hono";
 import { sessionStore } from "../services/sessions.js";
 import { getTTSService } from "../services/tts.js";
 
+// Input validation patterns
+const SESSION_ID_PATTERN = /^sess_\d+_[a-z0-9]+$/;
+const VOICE_ID_PATTERN = /^[a-zA-Z0-9]+$/;
+const MAX_TTS_TEXT_LENGTH = 5000;
+
+/**
+ * Validate session ID format
+ */
+function isValidSessionId(id: string): boolean {
+  return SESSION_ID_PATTERN.test(id);
+}
+
+/**
+ * Validate voice ID format (alphanumeric only)
+ */
+function isValidVoiceId(voiceId: string): boolean {
+  return VOICE_ID_PATTERN.test(voiceId);
+}
+
 export const gameRoutes = new Hono();
 
 /**
@@ -25,6 +44,11 @@ gameRoutes.post("/session", (c) => {
  */
 gameRoutes.get("/session/:id", (c) => {
   const id = c.req.param("id");
+
+  if (!isValidSessionId(id)) {
+    return c.json({ error: "Invalid session ID format" }, 400);
+  }
+
   const session = sessionStore.get(id);
 
   if (!session) {
@@ -44,6 +68,11 @@ gameRoutes.get("/session/:id", (c) => {
  */
 gameRoutes.patch("/session/:id", async (c) => {
   const id = c.req.param("id");
+
+  if (!isValidSessionId(id)) {
+    return c.json({ error: "Invalid session ID format" }, 400);
+  }
+
   const data = await c.req.json<Record<string, unknown>>();
 
   const session = sessionStore.update(id, data);
@@ -63,6 +92,11 @@ gameRoutes.patch("/session/:id", async (c) => {
  */
 gameRoutes.delete("/session/:id", (c) => {
   const id = c.req.param("id");
+
+  if (!isValidSessionId(id)) {
+    return c.json({ error: "Invalid session ID format" }, 400);
+  }
+
   const deleted = sessionStore.delete(id);
 
   if (!deleted) {
@@ -85,6 +119,17 @@ gameRoutes.post("/tts", async (c) => {
 
     if (!text || typeof text !== "string") {
       return c.json({ error: "Text is required" }, 400);
+    }
+
+    if (text.length > MAX_TTS_TEXT_LENGTH) {
+      return c.json(
+        { error: `Text exceeds maximum length of ${MAX_TTS_TEXT_LENGTH} characters` },
+        400
+      );
+    }
+
+    if (voiceId !== undefined && !isValidVoiceId(voiceId)) {
+      return c.json({ error: "Invalid voice ID format" }, 400);
     }
 
     const ttsService = getTTSService();

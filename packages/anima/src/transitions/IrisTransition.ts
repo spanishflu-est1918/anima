@@ -33,24 +33,51 @@ export interface DrawClosedOptions {
  */
 export class IrisTransition {
 	private scene: Scene;
-	private graphics: Phaser.GameObjects.Graphics;
+	private graphics: Phaser.GameObjects.Graphics | null = null;
 	private currentTween: Phaser.Tweens.Tween | null = null;
 	private destroyed = false;
+	private pendingResolve: (() => void) | null = null;
 
 	private static readonly DEFAULT_DURATION = 600;
 	private static readonly DEPTH = 1000;
+	private static readonly PADDING = 50;
 
 	constructor(scene: Scene) {
 		this.scene = scene;
 		this.graphics = scene.add.graphics();
 		this.graphics.setDepth(IrisTransition.DEPTH);
 		this.graphics.setScrollFactor(0);
+
+		// Clean up when scene shuts down
+		scene.events.once("shutdown", () => this.destroy());
+		scene.events.once("destroy", () => this.destroy());
+	}
+
+	/**
+	 * Cancel any running transition and resolve its pending promise
+	 */
+	private cancelCurrentTransition(): void {
+		if (this.currentTween) {
+			this.currentTween.destroy();
+			this.currentTween = null;
+		}
+		if (this.pendingResolve) {
+			this.pendingResolve();
+			this.pendingResolve = null;
+		}
 	}
 
 	/**
 	 * Animate iris closing (circle shrinks from full screen to point)
 	 */
 	irisOut(options: IrisTransitionOptions = {}): Promise<void> {
+		if (this.destroyed || !this.graphics) {
+			return Promise.resolve();
+		}
+
+		// Cancel any running transition first
+		this.cancelCurrentTransition();
+
 		const {
 			duration = IrisTransition.DEFAULT_DURATION,
 			centerX = this.scene.scale.width / 2,
@@ -65,16 +92,20 @@ export class IrisTransition {
 		const state = { radius: maxRadius };
 
 		return new Promise<void>((resolve) => {
+			this.pendingResolve = resolve;
 			this.currentTween = this.scene.tweens.add({
 				targets: state,
 				radius: 0,
 				duration,
 				ease: "Quad.easeIn",
 				onUpdate: () => {
-					this.drawIris(centerX, centerY, state.radius);
+					if (!this.destroyed && this.graphics) {
+						this.drawIris(centerX, centerY, state.radius);
+					}
 				},
 				onComplete: () => {
 					this.currentTween = null;
+					this.pendingResolve = null;
 					onComplete?.();
 					resolve();
 				},
@@ -86,6 +117,13 @@ export class IrisTransition {
 	 * Animate iris opening (circle expands from point to full screen)
 	 */
 	irisIn(options: IrisTransitionOptions = {}): Promise<void> {
+		if (this.destroyed || !this.graphics) {
+			return Promise.resolve();
+		}
+
+		// Cancel any running transition first
+		this.cancelCurrentTransition();
+
 		const {
 			duration = IrisTransition.DEFAULT_DURATION,
 			centerX = this.scene.scale.width / 2,
@@ -100,18 +138,22 @@ export class IrisTransition {
 		const state = { radius: 0 };
 
 		return new Promise<void>((resolve) => {
+			this.pendingResolve = resolve;
 			this.currentTween = this.scene.tweens.add({
 				targets: state,
 				radius: maxRadius,
 				duration,
 				ease: "Quad.easeOut",
 				onUpdate: () => {
-					this.drawIris(centerX, centerY, state.radius);
+					if (!this.destroyed && this.graphics) {
+						this.drawIris(centerX, centerY, state.radius);
+					}
 				},
 				onComplete: () => {
 					this.currentTween = null;
+					this.pendingResolve = null;
 					// Clear graphics after iris fully opens
-					this.graphics.clear();
+					this.graphics?.clear();
 					onComplete?.();
 					resolve();
 				},
@@ -120,14 +162,14 @@ export class IrisTransition {
 	}
 
 	/**
-	 * Draw a closed iris (filled screen with optional iris hole at center)
+	 * Draw a closed iris (filled screen)
 	 */
 	drawClosed(options: DrawClosedOptions = {}): void {
-		const {
-			centerX = this.scene.scale.width / 2,
-			centerY = this.scene.scale.height / 2,
-			color = 0x000000,
-		} = options;
+		if (this.destroyed || !this.graphics) {
+			return;
+		}
+
+		const { color = 0x000000 } = options;
 
 		this.graphics.clear();
 		this.graphics.fillStyle(color, 1);
@@ -137,10 +179,6 @@ export class IrisTransition {
 			this.scene.scale.width,
 			this.scene.scale.height,
 		);
-
-		// Store center for potential future use
-		void centerX;
-		void centerY;
 	}
 
 	/**
@@ -150,20 +188,24 @@ export class IrisTransition {
 		if (this.destroyed) {
 			return;
 		}
+		this.destroyed = true;
 
-		// Stop any running tween
-		if (this.currentTween) {
-			this.currentTween.destroy();
-			this.currentTween = null;
-		}
+		// Cancel any running transition and resolve its promise
+		this.cancelCurrentTransition();
 
 		// Destroy graphics
 		if (this.graphics) {
 			this.graphics.clear();
 			this.graphics.destroy();
+			this.graphics = null;
 		}
+	}
 
-		this.destroyed = true;
+	/**
+	 * Check if this transition has been destroyed
+	 */
+	isDestroyed(): boolean {
+		return this.destroyed;
 	}
 
 	/**
@@ -190,13 +232,17 @@ export class IrisTransition {
 		}
 
 		// Add some padding
-		return maxDist + 50;
+		return maxDist + IrisTransition.PADDING;
 	}
 
 	/**
 	 * Draw the iris mask with a circular hole
 	 */
 	private drawIris(centerX: number, centerY: number, radius: number): void {
+		if (!this.graphics) {
+			return;
+		}
+
 		const width = this.scene.scale.width;
 		const height = this.scene.scale.height;
 

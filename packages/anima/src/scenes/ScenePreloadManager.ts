@@ -9,16 +9,16 @@ export class ScenePreloadManager {
 	private static instance: ScenePreloadManager | null = null;
 
 	// Dependency graph mapping scenes to their dependent scenes
-	public dependencyGraph: Record<string, string[]> = {};
+	private dependencyGraph: Record<string, string[]> = {};
 
 	// Track scenes currently loading
-	public loadingScenes: Set<string> = new Set();
+	private loadingScenes: Set<string> = new Set();
 
 	// Track which scenes have been fully loaded
-	public loadedScenes: Set<string> = new Set();
+	private loadedScenes: Set<string> = new Set();
 
 	// Resolvers waiting for scene load completion
-	public waitingResolvers: Map<string, Array<() => void>> = new Map();
+	private waitingResolvers: Map<string, Array<() => void>> = new Map();
 
 	// =============================================================================
 	// Singleton
@@ -185,11 +185,33 @@ export class ScenePreloadManager {
 
 	/**
 	 * Reset all state.
+	 * Resolves all pending promises before clearing to prevent hanging awaits.
 	 */
 	public reset(): void {
+		// Resolve all pending promises before clearing to prevent hanging awaits
+		for (const resolvers of this.waitingResolvers.values()) {
+			for (const resolve of resolvers) {
+				resolve();
+			}
+		}
+
 		this.dependencyGraph = {};
 		this.loadingScenes.clear();
 		this.loadedScenes.clear();
 		this.waitingResolvers.clear();
+	}
+
+	/**
+	 * Cancel a specific scene's pending waits.
+	 * Resolves all promises waiting for that scene.
+	 */
+	public cancelSceneWait(sceneKey: string): void {
+		const resolvers = this.waitingResolvers.get(sceneKey);
+		if (resolvers) {
+			for (const resolve of resolvers) {
+				resolve();
+			}
+			this.waitingResolvers.delete(sceneKey);
+		}
 	}
 }

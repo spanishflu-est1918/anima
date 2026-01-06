@@ -270,14 +270,6 @@ class TestScene extends BaseScene {
 		return this.worldWidth;
 	}
 
-	public getEdgeZone() {
-		return this.EDGE_ZONE;
-	}
-
-	public getScrollSpeed() {
-		return this.SCROLL_SPEED;
-	}
-
 	public getGroundLineManagerInstance() {
 		return this.groundLineManager;
 	}
@@ -299,6 +291,8 @@ describe("BaseScene", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		testScene = new TestScene();
+		// Call create() to initialize helper modules (sceneCamera, sceneParallax, etc.)
+		testScene.create();
 	});
 
 	// =========================================================================
@@ -381,13 +375,7 @@ describe("BaseScene", () => {
 	// =========================================================================
 
 	describe("EXISTING FEATURES - Edge Scrolling Configuration", () => {
-		it("edge zone constant is defined", () => {
-			expect(testScene.getEdgeZone()).toBe(100);
-		});
-
-		it("scroll speed constant is defined", () => {
-			expect(testScene.getScrollSpeed()).toBe(12);
-		});
+		// Edge zone and scroll speed are now internal to SceneCamera (defaults: 100, 12)
 
 		it("handleEdgeScrolling is callable with pointer", () => {
 			const pointer = {

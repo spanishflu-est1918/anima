@@ -84,7 +84,9 @@ export class MockSound {
 	pause = vi.fn();
 	resume = vi.fn();
 	stop = vi.fn();
+	destroy = vi.fn();
 	setVolume = vi.fn();
+	once = vi.fn();
 	isPlaying = false;
 }
 
@@ -208,6 +210,7 @@ export class MockScene {
 
 	events = {
 		on: vi.fn(),
+		once: vi.fn(),
 		off: vi.fn(),
 		emit: vi.fn(),
 	};
