@@ -36,10 +36,7 @@ export class TestScene extends BaseScene {
 		},
 	};
 
-	private player!: Character;
-	private hotspots: Hotspot[] = [];
 	private radialMenu!: RadialMenu;
-	private speechText!: SpeechText;
 	private debugHotspots = false;
 
 	constructor() {
@@ -191,6 +188,7 @@ export class TestScene extends BaseScene {
 	}
 
 	private showDialogue(speaker: string, text: string, color: string): void {
+		if (!this.speechText || !this.player) return;
 		this.speechText.show(
 			speaker,
 			text,
@@ -200,11 +198,11 @@ export class TestScene extends BaseScene {
 
 		// Hide after 3 seconds or on click
 		this.time.delayedCall(3000, () => {
-			this.speechText.hide();
+			this.speechText?.hide();
 		});
 	}
 
-	private handlePointerDown(pointer: Phaser.Input.Pointer): void {
+	protected override handlePointerDown(pointer: Phaser.Input.Pointer): void {
 		// If editor consumed the click, don't process game interactions
 		if (this.editor?.consumedClick()) {
 			return;
@@ -216,7 +214,7 @@ export class TestScene extends BaseScene {
 		}
 
 		// If dialogue is showing, hide it and return
-		if (this.speechText.isVisible()) {
+		if (this.speechText?.isVisible()) {
 			this.speechText.hide();
 			return;
 		}
@@ -235,7 +233,7 @@ export class TestScene extends BaseScene {
 		if (clickedHotspot) {
 			// Show radial menu for hotspot
 			this.radialMenu.show(clickedHotspot);
-		} else {
+		} else if (this.player) {
 			// Move player to click location
 			const clampedX = this.clampMovement(worldX);
 			this.player.moveTo(clampedX);
