@@ -49,7 +49,7 @@ describe("API Routes", () => {
       });
 
       it("should return 404 for non-existent session", async () => {
-        const res = await app.request("/api/session/non-existent-id");
+        const res = await app.request("/api/session/sess_9999999999999_notexist");
         const json = await res.json();
 
         expect(res.status).toBe(404);
@@ -77,7 +77,7 @@ describe("API Routes", () => {
       });
 
       it("should return 404 for non-existent session", async () => {
-        const res = await app.request("/api/session/non-existent-id", {
+        const res = await app.request("/api/session/sess_9999999999999_notexist", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ foo: "bar" }),
@@ -110,7 +110,7 @@ describe("API Routes", () => {
       });
 
       it("should return 404 for non-existent session", async () => {
-        const res = await app.request("/api/session/non-existent-id", {
+        const res = await app.request("/api/session/sess_9999999999999_notexist", {
           method: "DELETE",
         });
         const json = await res.json();

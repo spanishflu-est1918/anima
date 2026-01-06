@@ -22,6 +22,7 @@ export interface TTSService {
 }
 
 const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1";
+const FETCH_TIMEOUT_MS = 30000; // 30 second timeout
 
 /**
  * Create a TTS service instance
@@ -45,21 +46,30 @@ export function createTTSService(config: TTSConfig): TTSService {
       throw new Error("No voice ID provided and no default voice configured");
     }
 
-    const response = await fetch(`${baseUrl}/text-to-speech/${voice}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "xi-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        text,
-        model_id: "eleven_monolingual_v1",
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}/text-to-speech/${voice}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "xi-api-key": apiKey,
         },
-      }),
-    });
+        body: JSON.stringify({
+          text,
+          model_id: "eleven_monolingual_v1",
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+          },
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const error = await response.text();
@@ -73,11 +83,20 @@ export function createTTSService(config: TTSConfig): TTSService {
    * Get available voices from ElevenLabs
    */
   async function getVoices(): Promise<Voice[]> {
-    const response = await fetch(`${baseUrl}/voices`, {
-      headers: {
-        "xi-api-key": apiKey,
-      },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}/voices`, {
+        headers: {
+          "xi-api-key": apiKey,
+        },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const error = await response.text();

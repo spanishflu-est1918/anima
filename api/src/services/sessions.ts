@@ -3,6 +3,8 @@
  * In-memory store for development, can be swapped for persistent storage
  */
 
+import { randomUUID } from "node:crypto";
+
 export interface Session {
   id: string;
   createdAt: Date;
@@ -19,10 +21,11 @@ export interface SessionStore {
 }
 
 /**
- * Generate a unique session ID
+ * Generate a unique session ID using cryptographically secure randomness
  */
 function generateSessionId(): string {
-  return `sess_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  const uuid = randomUUID().replace(/-/g, "").substring(0, 9);
+  return `sess_${Date.now()}_${uuid}`;
 }
 
 /**

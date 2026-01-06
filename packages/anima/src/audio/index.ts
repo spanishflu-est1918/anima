@@ -1,4 +1,8 @@
 export { SceneSoundManager } from "./SceneSoundManager";
+export { HoverSoundHandler } from "./HoverSoundHandler";
+export { SpatialAudioCalculator } from "./SpatialAudio";
+export { loadManifest, preloadSceneAudio, createEmptyManifest } from "./SoundLoader";
+export { VolumeController } from "./VolumeController";
 export type {
 	ActiveSound,
 	AmbientSoundConfig,

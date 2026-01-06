@@ -89,6 +89,7 @@ export class GameState {
 	}
 
 	public spendMoney(amount: number): boolean {
+		if (amount < 0) return false;
 		if (this.money < amount) {
 			return false;
 		}
