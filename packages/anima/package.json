@@ -11,7 +11,13 @@
 		"./characters": "./src/characters/index.ts",
 		"./hotspots": "./src/hotspots/index.ts",
 		"./dialogue": "./src/dialogue/index.ts",
-		"./editor": "./src/editor/index.ts"
+		"./editor": "./src/editor/index.ts",
+		"./state": "./src/state/index.ts",
+		"./ui": "./src/ui/index.ts",
+		"./inventory": "./src/inventory/index.ts",
+		"./audio": "./src/audio/index.ts",
+		"./transitions": "./src/transitions/index.ts",
+		"./groundline": "./src/groundline/index.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

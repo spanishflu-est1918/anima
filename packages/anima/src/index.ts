@@ -79,9 +79,15 @@ export * as inventory from "./inventory";
 export { InventoryManager } from "./inventory";
 // Re-export submodules
 export * as scenes from "./scenes";
-export type { ParallaxLayerConfig, SceneConfig } from "./scenes/BaseScene";
+export type {
+	ParallaxLayerConfig,
+	PlayerConfig,
+	SceneConfig,
+	TransitionOptions,
+} from "./scenes/BaseScene";
 // Scenes
 export { BaseScene } from "./scenes/BaseScene";
+export { ScenePreloadManager } from "./scenes/ScenePreloadManager";
 // State
 export * as state from "./state";
 export { GameState } from "./state";
