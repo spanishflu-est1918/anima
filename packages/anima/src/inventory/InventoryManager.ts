@@ -73,11 +73,13 @@ export class InventoryManager {
 	public pickupItem(itemId: string): boolean {
 		const itemDef = this.itemDefinitions.get(itemId);
 		if (!itemDef) {
+			console.warn(`InventoryManager: Cannot pick up unknown item: ${itemId}`);
 			return false;
 		}
 
 		const gameState = GameState.getInstance();
 		if (gameState.hasItem(itemId)) {
+			console.warn(`InventoryManager: Item already in inventory: ${itemId}`);
 			return false;
 		}
 
@@ -107,6 +109,7 @@ export class InventoryManager {
 	public removeItem(itemId: string): boolean {
 		const gameState = GameState.getInstance();
 		if (!gameState.hasItem(itemId)) {
+			console.warn(`InventoryManager: Cannot remove item not in inventory: ${itemId}`);
 			return false;
 		}
 
@@ -179,9 +182,14 @@ export class InventoryManager {
 	 */
 	public spendMoney(amount: number): boolean {
 		if (amount < 0) {
+			console.warn(`InventoryManager: Cannot spend negative amount: ${amount}`);
 			return false;
 		}
-		return GameState.getInstance().spendMoney(amount);
+		const success = GameState.getInstance().spendMoney(amount);
+		if (!success) {
+			console.warn(`InventoryManager: Insufficient funds to spend: ${amount}`);
+		}
+		return success;
 	}
 
 	/**
@@ -196,6 +204,9 @@ export class InventoryManager {
 
 		// Check player has both items
 		if (!gameState.hasItem(itemA) || !gameState.hasItem(itemB)) {
+			console.warn(
+				`InventoryManager: Cannot combine items - missing item(s): ${itemA}, ${itemB}`,
+			);
 			return null;
 		}
 
@@ -215,11 +226,17 @@ export class InventoryManager {
 		}
 
 		if (!resultId) {
+			console.warn(
+				`InventoryManager: No recipe found for combining: ${itemA} + ${itemB}`,
+			);
 			return null;
 		}
 
 		// Validate result item exists before modifying inventory
 		if (!this.itemDefinitions.has(resultId)) {
+			console.warn(
+				`InventoryManager: Recipe result item not registered: ${resultId}`,
+			);
 			return null;
 		}
 

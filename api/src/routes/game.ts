@@ -7,8 +7,8 @@ import { Hono } from "hono";
 import { sessionStore } from "../services/sessions.js";
 import { getTTSService } from "../services/tts.js";
 
-// Input validation patterns
-const SESSION_ID_PATTERN = /^sess_\d+_[a-z0-9]+$/;
+// Input validation patterns - session ID uses full UUID for maximum entropy
+const SESSION_ID_PATTERN = /^sess_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const VOICE_ID_PATTERN = /^[a-zA-Z0-9]+$/;
 const MAX_TTS_TEXT_LENGTH = 5000;
 

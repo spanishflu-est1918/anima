@@ -43,32 +43,38 @@ export class GameState {
 		this.flags.set(key, value);
 	}
 
-	// Inventory methods
-	public hasInventoryItem(itemId: string): boolean {
+	// Inventory methods - canonical short names
+	public hasItem(itemId: string): boolean {
 		return this.inventoryItems.has(itemId);
 	}
 
-	/** Alias for hasInventoryItem (used by InventoryManager) */
-	public hasItem(itemId: string): boolean {
-		return this.hasInventoryItem(itemId);
-	}
-
-	public addInventoryItem(itemId: string): void {
+	public addItem(itemId: string): void {
 		this.inventoryItems.add(itemId);
 	}
 
-	/** Alias for addInventoryItem (used by InventoryManager) */
-	public addItem(itemId: string): void {
-		this.addInventoryItem(itemId);
-	}
-
-	public removeInventoryItem(itemId: string): void {
+	public removeItem(itemId: string): void {
 		this.inventoryItems.delete(itemId);
 	}
 
-	/** Alias for removeInventoryItem (used by InventoryManager) */
-	public removeItem(itemId: string): void {
-		this.removeInventoryItem(itemId);
+	/**
+	 * @deprecated Use hasItem() instead. Will be removed in next major version.
+	 */
+	public hasInventoryItem(itemId: string): boolean {
+		return this.hasItem(itemId);
+	}
+
+	/**
+	 * @deprecated Use addItem() instead. Will be removed in next major version.
+	 */
+	public addInventoryItem(itemId: string): void {
+		this.addItem(itemId);
+	}
+
+	/**
+	 * @deprecated Use removeItem() instead. Will be removed in next major version.
+	 */
+	public removeInventoryItem(itemId: string): void {
+		this.removeItem(itemId);
 	}
 
 	public getInventory(): string[] {

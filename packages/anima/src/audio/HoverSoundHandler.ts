@@ -9,13 +9,7 @@
 
 import type { Scene } from "phaser";
 import type { ActiveSound, HoverSoundConfig, SoundManifest } from "./types";
-
-/**
- * Interface for objects with setVolume method
- */
-interface VolumeControllable {
-	setVolume?: (volume: number) => void;
-}
+import { wrapPhaserSound } from "./SoundWrapper";
 
 export class HoverSoundHandler {
 	private scene: Scene;
@@ -87,6 +81,7 @@ export class HoverSoundHandler {
 			this.activeHoverSound = {
 				key: hoverConfig.id,
 				sound,
+				wrappedSound: wrapPhaserSound(sound),
 				config: hoverConfig,
 				hotspotId: hoverConfig.hotspotId,
 			};
@@ -108,11 +103,7 @@ export class HoverSoundHandler {
 	updateVolume(masterVolume: number): void {
 		if (this.activeHoverSound) {
 			const hoverConfig = this.activeHoverSound.config as HoverSoundConfig;
-			const soundWithVolume = this.activeHoverSound
-				.sound as unknown as VolumeControllable;
-			if (soundWithVolume?.setVolume) {
-				soundWithVolume.setVolume(hoverConfig.volume * masterVolume);
-			}
+			this.activeHoverSound.wrappedSound.setVolume(hoverConfig.volume * masterVolume);
 		}
 	}
 

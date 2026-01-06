@@ -7,6 +7,12 @@ export interface TTSConfig {
   apiKey: string;
   defaultVoiceId?: string;
   baseUrl?: string;
+  /** TTS model ID (default: eleven_monolingual_v1) */
+  modelId?: string;
+  /** Voice stability 0-1 (default: 0.5) */
+  stability?: number;
+  /** Voice similarity boost 0-1 (default: 0.75) */
+  similarityBoost?: number;
 }
 
 export interface Voice {
@@ -23,12 +29,22 @@ export interface TTSService {
 
 const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1";
 const FETCH_TIMEOUT_MS = 30000; // 30 second timeout
+const DEFAULT_MODEL_ID = "eleven_monolingual_v1";
+const DEFAULT_STABILITY = 0.5;
+const DEFAULT_SIMILARITY_BOOST = 0.75;
 
 /**
  * Create a TTS service instance
  */
 export function createTTSService(config: TTSConfig): TTSService {
-  const { apiKey, defaultVoiceId, baseUrl = ELEVENLABS_BASE_URL } = config;
+  const {
+    apiKey,
+    defaultVoiceId,
+    baseUrl = ELEVENLABS_BASE_URL,
+    modelId = DEFAULT_MODEL_ID,
+    stability = DEFAULT_STABILITY,
+    similarityBoost = DEFAULT_SIMILARITY_BOOST,
+  } = config;
 
   if (!apiKey) {
     throw new Error("TTS service requires an API key");
@@ -59,10 +75,10 @@ export function createTTSService(config: TTSConfig): TTSService {
         },
         body: JSON.stringify({
           text,
-          model_id: "eleven_monolingual_v1",
+          model_id: modelId,
           voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
+            stability,
+            similarity_boost: similarityBoost,
           },
         }),
         signal: controller.signal,
@@ -117,7 +133,13 @@ export function createTTSService(config: TTSConfig): TTSService {
 let ttsServiceInstance: TTSService | null = null;
 
 /**
- * Get or create the TTS service instance
+ * Get or create the TTS service instance.
+ * Reads configuration from environment variables:
+ * - ELEVENLABS_API_KEY (required)
+ * - ELEVENLABS_DEFAULT_VOICE_ID (optional)
+ * - TTS_MODEL_ID (optional, default: eleven_monolingual_v1)
+ * - TTS_STABILITY (optional, default: 0.5)
+ * - TTS_SIMILARITY_BOOST (optional, default: 0.75)
  */
 export function getTTSService(): TTSService {
   if (!ttsServiceInstance) {
@@ -128,6 +150,13 @@ export function getTTSService(): TTSService {
     ttsServiceInstance = createTTSService({
       apiKey,
       defaultVoiceId: process.env.ELEVENLABS_DEFAULT_VOICE_ID,
+      modelId: process.env.TTS_MODEL_ID,
+      stability: process.env.TTS_STABILITY
+        ? parseFloat(process.env.TTS_STABILITY)
+        : undefined,
+      similarityBoost: process.env.TTS_SIMILARITY_BOOST
+        ? parseFloat(process.env.TTS_SIMILARITY_BOOST)
+        : undefined,
     });
   }
   return ttsServiceInstance;

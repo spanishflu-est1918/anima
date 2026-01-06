@@ -56,6 +56,7 @@ export class StoryManager {
 
 	/**
 	 * Set a variable value in a registered story
+	 * @throws Error if story not found for characterId
 	 */
 	public setStoryVariable(
 		characterId: string,
@@ -63,11 +64,16 @@ export class StoryManager {
 		value: string | number | boolean,
 	): void {
 		const story = this.stories.get(characterId);
-		if (!story) return;
+		if (!story) {
+			throw new Error(`No story found for character: ${characterId}`);
+		}
 		try {
 			story.variablesState.$(variableName, value);
-		} catch {
-			// Variable might not exist
+		} catch (error) {
+			console.warn(
+				`Failed to set story variable "${variableName}" for ${characterId}:`,
+				error,
+			);
 		}
 	}
 

@@ -1,6 +1,6 @@
 import { Scene } from "phaser";
 import { SceneSoundManager } from "../audio";
-import { Character, type CharacterAnimConfig } from "../characters";
+import { Character, type CharacterAnimConfig, getCharacterHeadPosition } from "../characters";
 import { SpeechText } from "../dialogue";
 import { type EditorCallbacks, HotspotEditor } from "../editor";
 import { type GroundLineConfig, GroundLineManager } from "../groundline";
@@ -51,6 +51,24 @@ export interface SceneConfig {
  * Provides: parallax backgrounds, ground line, edge scrolling, and scene transition helpers.
  */
 export abstract class BaseScene extends Scene {
+	/**
+	 * Standard game world height in pixels.
+	 * 1080p is the target resolution for this engine, matching Full HD displays.
+	 */
+	protected static readonly WORLD_HEIGHT = 1080;
+
+	/**
+	 * Default fade transition duration in milliseconds.
+	 * 500ms provides a smooth but not sluggish transition feel.
+	 */
+	protected static readonly DEFAULT_FADE_DURATION = 500;
+
+	/**
+	 * Default iris transition duration in milliseconds.
+	 * 600ms matches classic cartoon iris wipe timing.
+	 */
+	protected static readonly DEFAULT_IRIS_DURATION = 600;
+
 	// Helper modules (composition)
 	protected sceneCamera!: SceneCamera;
 	protected sceneParallax!: SceneParallax;
@@ -100,14 +118,14 @@ export abstract class BaseScene extends Scene {
 		// Initialize helper modules
 		const cameraConfig: CameraConfig = {
 			worldWidth: this.worldWidth,
-			worldHeight: 1080,
+			worldHeight: BaseScene.WORLD_HEIGHT,
 		};
 		this.sceneCamera = new SceneCamera(this, cameraConfig);
 		this.sceneParallax = new SceneParallax(this);
 		this.sceneTransitions = new SceneTransitions(this);
 
 		// Set up physics world bounds
-		this.physics.world.setBounds(0, 0, this.worldWidth, 1080);
+		this.physics.world.setBounds(0, 0, this.worldWidth, BaseScene.WORLD_HEIGHT);
 
 		// Set up camera bounds
 		this.sceneCamera.setupBounds();
@@ -202,7 +220,7 @@ export abstract class BaseScene extends Scene {
 	/**
 	 * Fade in the scene from black
 	 */
-	protected fadeInScene(duration = 500): void {
+	protected fadeInScene(duration = BaseScene.DEFAULT_FADE_DURATION): void {
 		this.sceneTransitions.fadeIn(duration);
 	}
 
@@ -212,7 +230,7 @@ export abstract class BaseScene extends Scene {
 	protected fadeToScene(
 		sceneKey: string,
 		data?: Record<string, unknown>,
-		duration = 500,
+		duration = BaseScene.DEFAULT_FADE_DURATION,
 	): void {
 		this.inputBlocked = true;
 		this.sceneTransitions.fadeToScene(sceneKey, data, duration);
@@ -238,7 +256,7 @@ export abstract class BaseScene extends Scene {
 	/**
 	 * Iris in from black at scene start
 	 */
-	public async irisInScene(duration = 600): Promise<void> {
+	public async irisInScene(duration = BaseScene.DEFAULT_IRIS_DURATION): Promise<void> {
 		await this.sceneTransitions.irisIn(duration, this.player);
 	}
 
@@ -247,20 +265,7 @@ export abstract class BaseScene extends Scene {
 	 * Returns center of screen if no player exists
 	 */
 	public getPlayerHeadPosition(): { x: number; y: number } {
-		if (!this.player) {
-			return {
-				x: this.cameras.main.scrollX + this.cameras.main.width / 2,
-				y: this.cameras.main.scrollY + this.cameras.main.height / 2,
-			};
-		}
-
-		// Player origin is at bottom-center (feet)
-		// Head is roughly at the top of the sprite (~90% up from feet)
-		const headOffset = this.player.displayHeight * 0.9;
-		return {
-			x: this.player.x,
-			y: this.player.y - headOffset,
-		};
+		return getCharacterHeadPosition(this.player, this.cameras.main);
 	}
 
 	// ===========================================================================
