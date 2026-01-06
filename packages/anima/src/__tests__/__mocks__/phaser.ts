@@ -1,0 +1,218 @@
+/**
+ * Phaser 3 mock for unit testing
+ * Provides minimal implementations of Phaser classes used by Anima
+ */
+
+import { vi } from "vitest";
+
+// Mock Phaser.Scene
+export class MockScene {
+	add = {
+		image: vi.fn(() => new MockImage()),
+		sprite: vi.fn(() => new MockSprite()),
+		graphics: vi.fn(() => new MockGraphics()),
+		text: vi.fn(() => new MockText()),
+		tileSprite: vi.fn(() => new MockTileSprite()),
+	};
+
+	load = {
+		audio: vi.fn(),
+		image: vi.fn(),
+		spritesheet: vi.fn(),
+		start: vi.fn(),
+		once: vi.fn((_event: string, callback: () => void) => callback()),
+	};
+
+	sound = {
+		add: vi.fn(() => new MockSound()),
+		play: vi.fn(),
+	};
+
+	cache = {
+		audio: {
+			exists: vi.fn(() => true),
+		},
+	};
+
+	input = {
+		on: vi.fn(),
+		activePointer: { x: 0, y: 0, wasTouch: false, isDown: false },
+		mouse: { disableContextMenu: vi.fn() },
+	};
+
+	cameras = {
+		main: {
+			scrollX: 0,
+			scrollY: 0,
+			width: 1920,
+			height: 1080,
+			setBounds: vi.fn(),
+			fadeIn: vi.fn(),
+			fadeOut: vi.fn(),
+		},
+	};
+
+	physics = {
+		world: {
+			setBounds: vi.fn(),
+		},
+	};
+
+	scale = {
+		width: 1920,
+		height: 1080,
+	};
+
+	tweens = {
+		add: vi.fn(() => ({ destroy: vi.fn() })),
+	};
+
+	events = {
+		on: vi.fn(),
+		off: vi.fn(),
+		emit: vi.fn(),
+	};
+
+	scene = {
+		start: vi.fn(),
+		restart: vi.fn(),
+		settings: { data: {} },
+	};
+
+	game = {
+		canvas: {
+			width: 1920,
+			height: 1080,
+			clientWidth: 1920,
+			clientHeight: 1080,
+		},
+	};
+
+	time = {
+		delayedCall: vi.fn(),
+	};
+}
+
+// Mock Game Objects
+export class MockGameObject {
+	x = 0;
+	y = 0;
+	depth = 0;
+	visible = true;
+	displayWidth = 100;
+	displayHeight = 100;
+
+	setPosition = vi.fn().mockReturnThis();
+	setDepth = vi.fn().mockReturnThis();
+	setVisible = vi.fn().mockReturnThis();
+	setOrigin = vi.fn().mockReturnThis();
+	setScale = vi.fn().mockReturnThis();
+	setScrollFactor = vi.fn().mockReturnThis();
+	setAlpha = vi.fn().mockReturnThis();
+	setTexture = vi.fn().mockReturnThis();
+	destroy = vi.fn();
+}
+
+export class MockImage extends MockGameObject {}
+
+export class MockSprite extends MockGameObject {
+	anims = {
+		play: vi.fn().mockReturnThis(),
+		stop: vi.fn().mockReturnThis(),
+	};
+	setFrame = vi.fn().mockReturnThis();
+}
+
+export class MockTileSprite extends MockGameObject {
+	tilePositionX = 0;
+	tilePositionY = 0;
+}
+
+export class MockGraphics extends MockGameObject {
+	clear = vi.fn().mockReturnThis();
+	fillStyle = vi.fn().mockReturnThis();
+	fillRect = vi.fn().mockReturnThis();
+	fillCircle = vi.fn().mockReturnThis();
+	strokeRect = vi.fn().mockReturnThis();
+	strokeCircle = vi.fn().mockReturnThis();
+	lineStyle = vi.fn().mockReturnThis();
+	lineTo = vi.fn().mockReturnThis();
+	moveTo = vi.fn().mockReturnThis();
+	beginPath = vi.fn().mockReturnThis();
+	closePath = vi.fn().mockReturnThis();
+	strokePath = vi.fn().mockReturnThis();
+	fillPath = vi.fn().mockReturnThis();
+}
+
+export class MockText extends MockGameObject {
+	setText = vi.fn().mockReturnThis();
+	setStyle = vi.fn().mockReturnThis();
+	setWordWrapWidth = vi.fn().mockReturnThis();
+}
+
+export class MockSound {
+	play = vi.fn();
+	pause = vi.fn();
+	resume = vi.fn();
+	stop = vi.fn();
+	setVolume = vi.fn();
+	isPlaying = false;
+}
+
+// Mock Rectangle (for bounds)
+export class MockRectangle {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+
+	constructor(x = 0, y = 0, width = 100, height = 100) {
+		this.x = x;
+		this.y = y;
+		this.width = width;
+		this.height = height;
+	}
+
+	get centerX() {
+		return this.x + this.width / 2;
+	}
+	get centerY() {
+		return this.y + this.height / 2;
+	}
+
+	contains(px: number, py: number): boolean {
+		return (
+			px >= this.x &&
+			px <= this.x + this.width &&
+			py >= this.y &&
+			py <= this.y + this.height
+		);
+	}
+}
+
+// Export mock Scene as default "Scene" class
+export const Scene = MockScene;
+
+// Namespaced mocks matching Phaser structure
+export const Geom = {
+	Rectangle: MockRectangle,
+};
+
+export const GameObjects = {
+	Image: MockImage,
+	Sprite: MockSprite,
+	Graphics: MockGraphics,
+	Text: MockText,
+	TileSprite: MockTileSprite,
+};
+
+export const Scenes = {
+	Events: {
+		POST_UPDATE: "postupdate",
+	},
+};
+
+// Helper to create a mock scene instance
+export function createMockScene(): MockScene {
+	return new MockScene();
+}

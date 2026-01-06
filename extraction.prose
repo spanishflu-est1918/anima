@@ -1,0 +1,743 @@
+session "Will → Anima TDD Extraction - Tests first, then implementation"
+
+// =============================================================================
+// PHASE 1: Foundation Tests & Types (Parallel)
+// =============================================================================
+
+parallel:
+  agent gamestate_tests:
+    """
+    Write comprehensive tests for GameState singleton.
+
+    TARGET: /home/gorkolas/www/anima/packages/anima/src/__tests__/state/GameState.test.ts
+
+    Replace the .todo tests with full implementations. Test cases:
+
+    SINGLETON PATTERN:
+    - getInstance() returns same instance on multiple calls
+    - Private constructor (verify singleton behavior)
+
+    CHARACTER STATES:
+    - getCharacterState returns 'opening' for unknown characters
+    - setCharacterState + getCharacterState roundtrip
+    - Multiple characters tracked independently
+
+    FLAGS:
+    - getFlag returns false for unset flags
+    - setFlag + getFlag roundtrip (true and false)
+    - Multiple flags tracked independently
+
+    INVENTORY:
+    - Empty inventory on start
+    - addInventoryItem adds item
+    - hasInventoryItem returns correct boolean
+    - removeInventoryItem removes item
+    - getInventory returns array of all items
+    - clearInventory empties all
+    - Cannot add duplicate items (Set behavior)
+
+    MONEY:
+    - Default money is 40
+    - setMoney sets to specific amount
+    - setMoney clamps at 0 (no negative)
+    - getMoney returns current
+    - spendMoney returns true and deducts if sufficient
+    - spendMoney returns false and keeps amount if insufficient
+
+    RESET:
+    - reset() clears flags
+    - reset() clears inventory
+    - reset() resets money to 40
+    - reset() resets character states (jamal back to 'opening')
+
+    After writing tests, run: pnpm test:run
+    Tests should fail (no implementation yet).
+    """
+
+  agent inventory_tests:
+    """
+    Write comprehensive tests for InventoryManager.
+
+    TARGET: /home/gorkolas/www/anima/packages/anima/src/__tests__/inventory/InventoryManager.test.ts
+
+    Test cases:
+
+    SINGLETON:
+    - getInstance returns same instance
+    - reset() clears singleton state for test isolation
+
+    ITEM REGISTRATION:
+    - registerItems() stores definitions
+    - getItemDef() retrieves registered item
+    - getItemDef() returns undefined for unknown items
+
+    PICKUP/REMOVE:
+    - pickupItem() adds to inventory via GameState
+    - pickupItem() calls UIState callback
+    - pickupItem() returns false for unknown item
+    - pickupItem() returns false for duplicate
+    - removeItem() removes from inventory
+    - removeItem() calls UIState callback
+    - removeItem() returns false for non-existent
+
+    HAS ITEM:
+    - hasItem() returns true for owned items
+    - hasItem() returns false for not owned
+
+    DESCRIPTIONS:
+    - getLookDescription() returns string description
+    - getLookDescription() handles progressive descriptions (array)
+    - getLookDescription() increments counter per look
+    - getLookDescription() caps at last description
+    - getUseDescription() returns use description
+    - getUseDescription() returns default if none specified
+
+    MONEY:
+    - getMoney() returns GameState money
+    - spendMoney() deducts if sufficient (returns true)
+    - spendMoney() fails if insufficient (returns false)
+
+    COMBINATIONS:
+    - combineItems() returns result item ID if recipe exists
+    - combineItems() removes source items
+    - combineItems() adds result item
+    - combineItems() returns null if no recipe
+    - combineItems() is bidirectional (A+B = B+A)
+
+    After writing, run tests. Should fail.
+    """
+
+  agent sound_manager_tests:
+    """
+    Write comprehensive tests for SceneSoundManager.
+
+    TARGET: /home/gorkolas/www/anima/packages/anima/src/__tests__/audio/SceneSoundManager.test.ts
+
+    Mock fetch for manifest loading. Test cases:
+
+    INITIALIZATION:
+    - initialize() loads manifest from /audio/scenes/manifest.json
+    - initialize() handles missing manifest gracefully
+    - initialize() preloads all scene audio
+
+    AMBIENT SOUNDS:
+    - playAmbient() plays looping sound at specified volume
+    - Ambient sounds respect condition flags
+    - Ambient sounds skip if condition not met
+
+    OBJECT SOUNDS (SPATIAL):
+    - playObjectSound() calculates distance-based volume
+    - Volume at refDistance is full
+    - Volume at maxDistance is zero
+    - Volume interpolates between ref and max
+    - rolloffFactor affects falloff curve
+
+    HOVER SOUNDS:
+    - setHoveredHotspot() starts hover sound
+    - setHoveredHotspot(null) fades out hover sound
+    - Only one hover sound plays at a time
+
+    ONESHOT:
+    - playOneshot() plays sound once
+    - playOneshot() uses correct trigger ID
+    - playOneshot() handles unknown trigger gracefully
+
+    LISTENER POSITION:
+    - updateListenerPosition() updates spatial calculations
+    - Spatial sounds update volume when listener moves
+
+    CONDITION CHECKING:
+    - checkCondition() uses GameState flags
+    - updateSoundStates() starts/stops based on flag changes
+
+    LIFECYCLE:
+    - fadeOutAll() fades all sounds over duration
+    - setMasterVolume() scales all volumes
+    - pauseAll() / resumeAll() work correctly
+    - destroy() stops all sounds
+
+    Use Phaser mocks from __mocks__/phaser.ts.
+    """
+
+  agent uistate_tests:
+    """
+    Write comprehensive tests for UIState observable.
+
+    TARGET: /home/gorkolas/www/anima/packages/anima/src/__tests__/ui/UIState.test.ts
+
+    Test cases:
+
+    SINGLETON:
+    - getInstance returns same instance
+
+    SCENE NAME:
+    - setSceneName() updates sceneName
+    - getSceneName() returns current
+
+    HOVERED HOTSPOT:
+    - setHoveredHotspot(name, pos) sets hotspot info
+    - setHoveredHotspot(null) clears
+    - getHoveredHotspot() returns current or null
+
+    DIALOGUE:
+    - showDialogue(config) sets visible and content
+    - hideDialogue() clears visible
+    - isDialogueVisible() returns correct state
+    - getDialogueContent() returns speaker, text, choices, etc.
+
+    INVENTORY:
+    - addInventoryItem(item) appends to array
+    - removeInventoryItem(id) removes by id
+    - getInventory() returns current array
+
+    VERB SELECTION:
+    - setSelectedVerb(verb) sets verb
+    - getSelectedVerb() returns current
+    - clearVerbSelection() clears verb and item
+
+    ITEM SELECTION:
+    - setSelectedItem(item) sets item
+    - getSelectedItem() returns current
+
+    SCENE LOADING:
+    - showSceneLoading(true) sets loading
+    - showSceneLoading(false) clears
+    - isSceneLoading() returns state
+
+    SUBSCRIPTIONS:
+    - subscribe(callback) receives updates on changes
+    - unsubscribe() removes listener
+    - Multiple subscribers all notified
+    - Unsubscribed callback not called
+
+    Framework-agnostic (no React imports).
+    """
+
+  agent transition_tests:
+    """
+    Write tests for IrisTransition effect.
+
+    TARGET: /home/gorkolas/www/anima/packages/anima/src/__tests__/transitions/IrisTransition.test.ts
+
+    Test cases (using Phaser mocks):
+
+    CONSTRUCTION:
+    - Creates graphics object on scene
+
+    IRIS OUT:
+    - irisOut() starts with open circle
+    - irisOut() shrinks to point at center
+    - irisOut() respects duration
+    - irisOut() calls onComplete when done
+    - irisOut() uses specified centerX, centerY
+
+    IRIS IN:
+    - irisIn() starts closed
+    - irisIn() expands to full screen
+    - irisIn() respects duration
+    - irisIn() calls onComplete when done
+
+    DRAW CLOSED:
+    - drawClosed() fills screen with black
+    - drawClosed() leaves specified center point
+
+    CLEANUP:
+    - destroy() removes graphics object
+    """
+
+let phase1_tests = parallel
+
+// =============================================================================
+// PHASE 1B: Implement to Pass Tests (Sequential per system)
+// =============================================================================
+
+context: phase1_tests
+
+agent gamestate_impl:
+  """
+  Implement GameState to pass all tests.
+
+  SOURCE: /home/gorkolas/www/will/game/src/game/systems/InkDialogueManager.ts (lines 12-98)
+  TARGET: /home/gorkolas/www/anima/packages/anima/src/state/GameState.ts
+
+  Create:
+  1. packages/anima/src/state/GameState.ts
+  2. packages/anima/src/state/index.ts (exports GameState)
+
+  Implementation:
+  - Private static instance
+  - Private constructor
+  - Public static getInstance()
+  - characterStates: Map<string, string> (default jamal->opening)
+  - flags: Map<string, boolean>
+  - inventoryItems: Set<string>
+  - money: number = 40
+  - All getters/setters from test spec
+  - reset() method
+
+  Update packages/anima/src/index.ts to export from state.
+
+  Run: pnpm test:run
+  Verify GameState tests pass.
+  """
+
+let impl1 = gamestate_impl
+
+context: impl1
+
+agent uistate_impl:
+  """
+  Implement UIState to pass all tests.
+
+  TARGET: /home/gorkolas/www/anima/packages/anima/src/ui/UIState.ts
+
+  Implementation:
+  - Private static instance
+  - Observable pattern with subscribers Set
+  - All state properties from test spec
+  - notify() method to call all subscribers
+  - Each setter calls notify()
+  - subscribe(callback) adds to Set, returns unsubscribe function
+  - Framework-agnostic (vanilla TypeScript)
+
+  Update ui/index.ts exports.
+
+  Run: pnpm test:run
+  """
+
+let impl2 = uistate_impl
+
+context: impl2
+
+agent inventory_impl:
+  """
+  Implement InventoryManager to pass all tests.
+
+  SOURCE: /home/gorkolas/www/will/game/src/game/systems/InventoryManager.ts
+  TARGET: /home/gorkolas/www/anima/packages/anima/src/inventory/InventoryManager.ts
+
+  Implementation:
+  - Private static instance
+  - Uses GameState for storage
+  - Uses UIState for UI notifications
+  - itemDefinitions: Map<string, ItemDefinition>
+  - lookCounts: Map<string, number> for progressive descriptions
+  - registerItems(definitions)
+  - All methods from test spec
+  - Combination logic with bidirectional recipe check
+
+  Update inventory/index.ts and types.ts.
+
+  Run: pnpm test:run
+  """
+
+let impl3 = inventory_impl
+
+context: impl3
+
+parallel:
+  agent sound_impl:
+    """
+    Implement SceneSoundManager to pass all tests.
+
+    SOURCE: /home/gorkolas/www/will/game/src/game/systems/SceneSoundManager.ts
+    TARGET: /home/gorkolas/www/anima/packages/anima/src/audio/SceneSoundManager.ts
+
+    Also create:
+    - packages/anima/src/audio/types.ts (extract from Will's sceneSounds.ts)
+    - packages/anima/src/audio/index.ts
+
+    Implementation follows Will closely but:
+    - Use GameState from ../state
+    - Generic Hotspot interface (just id and bounds)
+    - Framework-agnostic
+
+    Run: pnpm test:run
+    """
+
+  agent transition_impl:
+    """
+    Implement IrisTransition to pass all tests.
+
+    SOURCE: /home/gorkolas/www/will/game/src/game/systems/IrisTransition.ts
+    TARGET: /home/gorkolas/www/anima/packages/anima/src/transitions/IrisTransition.ts
+
+    Create:
+    - packages/anima/src/transitions/IrisTransition.ts
+    - packages/anima/src/transitions/index.ts
+
+    Implementation:
+    - Uses Phaser Graphics
+    - irisOut() with tween shrinking circle
+    - irisIn() with tween expanding circle
+    - Options: centerX, centerY, duration, ease, onComplete
+    - destroy() cleanup
+
+    Run: pnpm test:run
+    """
+
+let phase1_impl = parallel
+
+// =============================================================================
+// PHASE 2: Scene System Tests & Implementation
+// =============================================================================
+
+context: phase1_impl
+
+agent preload_tests:
+  """
+  Write tests for ScenePreloadManager.
+
+  TARGET: /home/gorkolas/www/anima/packages/anima/src/__tests__/scenes/ScenePreloadManager.test.ts
+
+  Test cases:
+
+  SINGLETON:
+  - getInstance returns same instance
+
+  DEPENDENCY GRAPH:
+  - setDependencies(graph) stores scene relationships
+  - getNextScenesForPreload(scene) returns dependent scenes
+  - Returns empty array for leaf scenes
+
+  PRELOAD STATE:
+  - preloadScene(key) marks as loading
+  - isSceneLoaded(key) returns false initially
+  - isSceneLoaded(key) returns true after loaded
+
+  ASYNC WAITING:
+  - waitForSceneWithTimeout(key) resolves when loaded
+  - waitForSceneWithTimeout(key) rejects on timeout
+  - Already loaded scenes resolve immediately
+
+  Run tests (should fail).
+  """
+
+let preload_tests_done = preload_tests
+
+context: preload_tests_done
+
+agent preload_impl:
+  """
+  Implement ScenePreloadManager to pass tests.
+
+  SOURCE: /home/gorkolas/www/will/game/src/game/systems/ScenePreloadManager.ts
+  TARGET: /home/gorkolas/www/anima/packages/anima/src/scenes/ScenePreloadManager.ts
+
+  Implementation:
+  - Singleton pattern
+  - dependencyGraph: Record<string, string[]>
+  - loadedScenes: Set<string>
+  - loadingScenes: Map<string, Promise<void>>
+  - All methods from test spec
+
+  Generic string keys (not game-specific enum).
+
+  Update scenes/index.ts.
+  Run: pnpm test:run
+  """
+
+let phase2 = preload_impl
+
+// =============================================================================
+// PHASE 3: BaseScene Expansion
+// =============================================================================
+
+context: phase2
+
+agent basescene_tests:
+  """
+  Write tests for expanded BaseScene features.
+
+  TARGET: /home/gorkolas/www/anima/packages/anima/src/__tests__/scenes/BaseScene.test.ts
+
+  Create concrete TestScene class extending BaseScene for testing.
+
+  Test cases:
+
+  EXISTING (verify not broken):
+  - Parallax layers added correctly
+  - Edge scrolling works
+  - Ground line manager created
+
+  PLAYER INTEGRATION:
+  - createPlayer() creates Character at spawn
+  - Player registered with ground line
+  - getPlayer() returns player instance
+
+  DIALOGUE SETUP:
+  - setupDialogueSystems() creates InkDialogueManager
+  - Speech text created
+  - Player registered with dialogue manager
+
+  SOUND MANAGER:
+  - initializeSoundManager() creates SceneSoundManager
+  - Sound listener updated in update()
+
+  INPUT HANDLING:
+  - setupInputHandlers() registers click handler
+  - Click on hotspot shows radial menu
+  - Click on empty space moves player
+  - Clicks blocked during dialogue
+
+  TRANSITIONS:
+  - transitionToScene() uses IrisTransition
+  - irisInScene() expands from black
+  - Transitions blocked during loading
+
+  DIALOGUE CAMERA:
+  - Camera pans when dialogue starts
+  - Camera returns to normal when dialogue ends
+
+  Use Phaser mocks. Run tests (should fail).
+  """
+
+let basescene_tests_done = basescene_tests
+
+context: basescene_tests_done
+
+agent basescene_impl:
+  """
+  Expand BaseScene to pass all tests.
+
+  SOURCE: /home/gorkolas/www/will/game/src/game/scenes/BaseScene.ts
+  TARGET: /home/gorkolas/www/anima/packages/anima/src/scenes/BaseScene.ts
+
+  Add these features to EXISTING BaseScene (don't remove current code):
+
+  1. PLAYER CHARACTER
+     - protected player?: Character
+     - createPlayer(config: { x, y, scale, spriteKey, animations })
+     - getPlayer(): Character | undefined
+
+  2. HOTSPOTS & RADIAL MENU
+     - protected hotspots: Hotspot[] = []
+     - protected radialMenu?: RadialMenu
+
+  3. DIALOGUE SYSTEMS
+     - protected inkDialogueManager?: InkDialogueManager
+     - protected speechText?: SpeechText
+     - setupDialogueSystems()
+     - onPlayerTalkingStart/End (overridable)
+
+  4. SOUND MANAGER
+     - protected soundManager?: SceneSoundManager
+     - async initializeSoundManager()
+     - updateSoundListener() called in update()
+
+  5. INPUT HANDLING
+     - setupInputHandlers()
+     - handlePointerDown(pointer)
+     - updateHotspotHovers(pointer)
+     - handleUseItemOnHotspot(item, hotspot) - overridable
+
+  6. SCENE TRANSITIONS
+     - protected irisTransition?: IrisTransition
+     - async transitionToScene(key, options)
+     - irisInScene(duration, force)
+     - getPlayerHeadPosition()
+
+  7. DIALOGUE CAMERA
+     - updateDialogueCamera()
+     - centerCameraOnDialogue()
+     - protected wasDialogueActive
+
+  8. UI STATE
+     - Import UIState
+     - Update on create()
+     - Check dialogueVisible in click handler
+
+  9. DEBUG
+     - protected debugMode: boolean
+     - createDebugCoords()
+     - updateDebugCoords()
+
+  Keep ALL existing functionality. Run: pnpm test:run
+  """
+
+let phase3 = basescene_impl
+
+// =============================================================================
+// PHASE 4: Backend API with Tests
+// =============================================================================
+
+context: phase1_impl
+
+parallel:
+  agent api_tests:
+    """
+    Write tests for API routes.
+
+    TARGET: /home/gorkolas/www/anima/api/src/__tests__/routes.test.ts
+
+    Use Hono testing helpers. Test cases:
+
+    HEALTH:
+    - GET /api/health returns 200
+
+    SESSIONS:
+    - POST /api/session creates session, returns id
+    - GET /api/session/:id returns session if valid
+    - GET /api/session/:id returns 404 if invalid
+    - Session middleware extracts X-Session-ID header
+    - Session middleware extracts sessionId query param
+
+    TTS:
+    - POST /api/tts requires session
+    - POST /api/tts validates body (text required)
+    - POST /api/tts returns audio content-type
+
+    Create test setup with mock services.
+    """
+
+  agent tts_tests:
+    """
+    Write tests for TTS service.
+
+    TARGET: /home/gorkolas/www/anima/api/src/__tests__/services/tts.test.ts
+
+    Mock fetch for ElevenLabs API. Test cases:
+
+    CONFIGURATION:
+    - createTTSService(config) creates service
+    - Requires apiKey in config
+
+    GENERATE SPEECH:
+    - generateSpeech(text) calls ElevenLabs API
+    - Uses defaultVoiceId if none specified
+    - Uses specified voiceId if provided
+    - Returns ArrayBuffer
+    - Throws on API error
+
+    GET VOICES:
+    - getVoices() returns available voices
+
+    STREAMING:
+    - streamSpeech(text) returns ReadableStream
+    """
+
+  agent session_tests:
+    """
+    Write tests for session service.
+
+    TARGET: /home/gorkolas/www/anima/api/src/__tests__/services/sessions.test.ts
+
+    Test cases:
+
+    IN-MEMORY STORE:
+    - create() generates unique ID
+    - create() sets createdAt and lastAccess
+    - get(id) returns session
+    - get(invalid) returns null
+    - update(id, data) merges data
+    - update(id) updates lastAccess
+    - delete(id) removes session
+    - cleanup(maxAge) removes expired sessions
+
+    MIDDLEWARE:
+    - Extracts X-Session-ID from header
+    - Extracts sessionId from query
+    - Returns 401 if no session ID
+    - Returns 401 if invalid session ID
+    - Sets session on context if valid
+    """
+
+let api_tests_done = parallel
+
+context: api_tests_done
+
+agent api_impl:
+  """
+  Implement API to pass all tests.
+
+  Create full API structure:
+
+  /home/gorkolas/www/anima/api/
+  ├── package.json (@anima/api)
+  ├── tsconfig.json
+  └── src/
+      ├── index.ts (Hono app)
+      ├── routes/
+      │   └── game.ts
+      ├── services/
+      │   ├── tts.ts
+      │   └── sessions.ts
+      ├── middleware/
+      │   └── session.ts
+      └── __tests__/
+          └── (test files)
+
+  Dependencies: hono, @hono/node-server
+  DevDeps: vitest, typescript
+
+  Update pnpm-workspace.yaml to include api/.
+
+  Implement all services to pass tests.
+  Run: pnpm test:run
+  """
+
+let phase4 = api_impl
+
+// =============================================================================
+// PHASE 5: Final Integration
+// =============================================================================
+
+context: phase3, phase4
+
+agent final_integration:
+  """
+  Final integration and export updates.
+
+  1. UPDATE EXPORTS - packages/anima/src/index.ts:
+     - export * from './state'
+     - export * from './inventory'
+     - export * from './audio'
+     - export * from './transitions'
+     - Verify all existing exports still work
+
+  2. UPDATE PACKAGE.JSON exports map:
+     - "@anima/engine/state"
+     - "@anima/engine/inventory"
+     - "@anima/engine/audio"
+     - "@anima/engine/transitions"
+
+  3. VERIFY GAME COMPILES:
+     cd /home/gorkolas/www/anima/game && pnpm typecheck
+
+  4. RUN FULL TEST SUITE:
+     cd /home/gorkolas/www/anima && pnpm test:run
+
+  5. RUN COVERAGE:
+     pnpm test:coverage
+     Verify >80% coverage on new code.
+
+  6. LINT:
+     pnpm lint
+     Fix any warnings/errors.
+
+  7. TYPECHECK:
+     pnpm typecheck
+     Zero errors.
+
+  Report final test count and coverage %.
+  """
+
+let final = final_integration
+
+// =============================================================================
+// Summary
+// =============================================================================
+
+session "TDD Extraction Complete"
+session "Tests written BEFORE implementation for all systems:"
+session "- GameState: ~20 tests"
+session "- InventoryManager: ~25 tests"
+session "- SceneSoundManager: ~20 tests"
+session "- UIState: ~20 tests"
+session "- IrisTransition: ~10 tests"
+session "- ScenePreloadManager: ~10 tests"
+session "- BaseScene expansion: ~15 tests"
+session "- API routes: ~10 tests"
+session "- TTS service: ~8 tests"
+session "- Session service: ~12 tests"
+session "Total: ~150 tests covering all extraction targets"

@@ -15,6 +15,8 @@ export default defineConfig({
 	},
 	server: {
 		port: 8080,
+		host: true,
 		hmr: false,
+		allowedHosts: ["raspgorkpi.drake-halosaur.ts.net", "100.73.125.61"],
 	},
 });
