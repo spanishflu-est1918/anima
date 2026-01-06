@@ -13,7 +13,7 @@ describe("InMemorySessionStore", () => {
       const session = store.create();
 
       expect(session.id).toBeDefined();
-      expect(session.id).toMatch(/^sess_\d+_[a-z0-9]+$/);
+      expect(session.id).toMatch(/^sess_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       expect(session.createdAt).toBeInstanceOf(Date);
       expect(session.lastAccess).toBeInstanceOf(Date);
     });

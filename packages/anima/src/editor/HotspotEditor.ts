@@ -65,6 +65,9 @@ export class HotspotEditor {
 	// Track all suspended entities (to resume when editor closes)
 	private suspendedEntities: Set<string> = new Set();
 
+	// Track keyboard listeners for cleanup
+	private keyboardListeners: Array<{ event: string; callback: () => void }> = [];
+
 	constructor(scene: Scene, callbacks?: EditorCallbacks) {
 		this.scene = scene;
 		this.callbacks = callbacks || {};
@@ -157,22 +160,21 @@ export class HotspotEditor {
 
 	private setupKeys(): void {
 		const kb = this.scene.input.keyboard;
-		kb?.on("keydown-E", () => this.toggle());
-		kb?.on("keydown-S", () => this.enabled && this.copyAllJSON());
-		kb?.on(
-			"keydown-C",
-			() => this.enabled && this.selection.current && this.copySelectedJSON(),
-		);
+		if (!kb) return;
+
+		const addKey = (key: string, callback: () => void) => {
+			const event = `keydown-${key}`;
+			kb.on(event, callback);
+			this.keyboardListeners.push({ event, callback });
+		};
+
+		addKey("E", () => this.toggle());
+		addKey("S", () => this.enabled && this.copyAllJSON());
+		addKey("C", () => this.enabled && this.selection.current && this.copySelectedJSON());
 		// Ground line point shortcuts
-		kb?.on("keydown-A", () => this.enabled && this.addGroundLinePoint());
-		kb?.on(
-			"keydown-DELETE",
-			() => this.enabled && this.removeSelectedGroundLinePoint(),
-		);
-		kb?.on(
-			"keydown-BACKSPACE",
-			() => this.enabled && this.removeSelectedGroundLinePoint(),
-		);
+		addKey("A", () => this.enabled && this.addGroundLinePoint());
+		addKey("DELETE", () => this.enabled && this.removeSelectedGroundLinePoint());
+		addKey("BACKSPACE", () => this.enabled && this.removeSelectedGroundLinePoint());
 	}
 
 	private suspendEntity(entityId: string): void {
@@ -293,6 +295,13 @@ export class HotspotEditor {
 	}
 
 	destroy(): void {
+		// Remove keyboard listeners to prevent memory leaks
+		const kb = this.scene.input.keyboard;
+		for (const { event, callback } of this.keyboardListeners) {
+			kb?.off(event, callback);
+		}
+		this.keyboardListeners = [];
+
 		sceneEditors.delete(this.scene);
 		this.handles.destroy();
 		this.renderer.destroy();

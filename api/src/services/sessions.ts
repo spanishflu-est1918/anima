@@ -21,11 +21,11 @@ export interface SessionStore {
 }
 
 /**
- * Generate a unique session ID using cryptographically secure randomness
+ * Generate a unique session ID using cryptographically secure randomness.
+ * Uses full UUID (not truncated) for maximum entropy and security.
  */
 function generateSessionId(): string {
-  const uuid = randomUUID().replace(/-/g, "").substring(0, 9);
-  return `sess_${Date.now()}_${uuid}`;
+  return `sess_${randomUUID()}`;
 }
 
 /**

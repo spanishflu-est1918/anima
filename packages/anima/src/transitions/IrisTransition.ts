@@ -38,9 +38,24 @@ export class IrisTransition {
 	private destroyed = false;
 	private pendingResolve: (() => void) | null = null;
 
+	/** Default animation duration in milliseconds for iris transitions */
 	private static readonly DEFAULT_DURATION = 600;
+
+	/** Render depth ensuring iris overlay appears above all scene content */
 	private static readonly DEPTH = 1000;
+
+	/**
+	 * Extra radius padding (in pixels) added to the calculated max radius.
+	 * Ensures the iris circle fully covers screen corners during animation.
+	 */
 	private static readonly PADDING = 50;
+
+	/**
+	 * Number of line segments used to approximate the iris circle.
+	 * 72 segments = 5 degrees per segment, providing smooth circular appearance
+	 * while maintaining good performance.
+	 */
+	private static readonly CIRCLE_SEGMENTS = 72;
 
 	constructor(scene: Scene) {
 		this.scene = scene;
@@ -256,7 +271,7 @@ export class IrisTransition {
 		}
 
 		// Draw the black area with a circular hole using path-based approach
-		const segments = 72;
+		const segments = IrisTransition.CIRCLE_SEGMENTS;
 		const maxRadius = Math.max(width, height) * 2;
 
 		this.graphics.beginPath();

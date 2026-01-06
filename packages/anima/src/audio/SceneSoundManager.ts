@@ -9,10 +9,17 @@ import {
 	preloadSceneAudio,
 	createEmptyManifest,
 } from "./SoundLoader";
+import { wrapPhaserSound } from "./SoundWrapper";
 import { VolumeController } from "./VolumeController";
 import type { ActiveSound, SoundManifest, SpatialHotspot } from "./types";
 
 export class SceneSoundManager {
+	/**
+	 * Default fade out duration in milliseconds for fadeOutAll().
+	 * 1 second provides a smooth audio transition during scene changes.
+	 */
+	private static readonly DEFAULT_FADE_OUT_DURATION = 1000;
+
 	private scene: Scene;
 	private sceneId: string;
 	private gameState: GameState;
@@ -50,9 +57,19 @@ export class SceneSoundManager {
 
 	/** Play an ambient sound by ID */
 	playAmbient(soundId: string): void {
-		if (!this.manifest || !this.initialized) return;
-		if (!this.scene?.sound?.add) return;
-		if (this.activeSounds.has(soundId)) return;
+		if (!this.manifest || !this.initialized) {
+			console.warn(
+				`SceneSoundManager: Cannot play ambient "${soundId}" - not initialized`,
+			);
+			return;
+		}
+		if (!this.scene?.sound?.add) {
+			console.warn(
+				`SceneSoundManager: Cannot play ambient "${soundId}" - sound system unavailable`,
+			);
+			return;
+		}
+		if (this.activeSounds.has(soundId)) return; // Not an error - sound already playing
 
 		const config = this.manifest.ambient.find((s) => s.id === soundId);
 		if (!config) {
@@ -71,12 +88,22 @@ export class SceneSoundManager {
 		});
 
 		sound.play();
-		this.activeSounds.set(soundId, { key: soundId, sound, config });
+		this.activeSounds.set(soundId, {
+			key: soundId,
+			sound,
+			wrappedSound: wrapPhaserSound(sound),
+			config,
+		});
 	}
 
 	/** Start conditional ambient sounds based on game state */
 	startConditionalAmbient(): void {
-		if (!this.manifest || !this.initialized) return;
+		if (!this.manifest || !this.initialized) {
+			console.warn(
+				"SceneSoundManager: Cannot start conditional ambient - not initialized",
+			);
+			return;
+		}
 
 		for (const ambient of this.manifest.ambient) {
 			if (this.checkCondition(ambient.condition) && !this.activeSounds.has(ambient.id)) {
@@ -87,9 +114,19 @@ export class SceneSoundManager {
 
 	/** Play an object sound at a specific position */
 	playObjectSound(soundId: string, sourceX: number, sourceY: number): void {
-		if (!this.manifest || !this.initialized) return;
-		if (!this.scene?.sound?.add) return;
-		if (this.activeSounds.has(soundId)) return;
+		if (!this.manifest || !this.initialized) {
+			console.warn(
+				`SceneSoundManager: Cannot play object sound "${soundId}" - not initialized`,
+			);
+			return;
+		}
+		if (!this.scene?.sound?.add) {
+			console.warn(
+				`SceneSoundManager: Cannot play object sound "${soundId}" - sound system unavailable`,
+			);
+			return;
+		}
+		if (this.activeSounds.has(soundId)) return; // Not an error - sound already playing
 
 		const config = this.manifest.objects.find((s) => s.id === soundId);
 		if (!config) {
@@ -112,6 +149,7 @@ export class SceneSoundManager {
 		this.activeSounds.set(soundId, {
 			key: soundId,
 			sound,
+			wrappedSound: wrapPhaserSound(sound),
 			config,
 			hotspotId: config.hotspotId,
 			sourceX,
@@ -121,11 +159,24 @@ export class SceneSoundManager {
 
 	/** Play oneshot sound by trigger ID */
 	playOneshot(triggerId: string): void {
-		if (!this.manifest || !this.initialized) return;
-		if (!this.scene?.sound?.add) return;
+		if (!this.manifest || !this.initialized) {
+			console.warn(
+				`SceneSoundManager: Cannot play oneshot "${triggerId}" - not initialized`,
+			);
+			return;
+		}
+		if (!this.scene?.sound?.add) {
+			console.warn(
+				`SceneSoundManager: Cannot play oneshot "${triggerId}" - sound system unavailable`,
+			);
+			return;
+		}
 
 		const config = this.manifest.oneshot.find((s) => s.triggerId === triggerId);
-		if (!config) return;
+		if (!config) {
+			console.warn(`SceneSoundManager: Oneshot trigger not found: ${triggerId}`);
+			return;
+		}
 
 		if (!this.scene.cache.audio.exists(config.id)) {
 			console.warn(`SceneSoundManager: Audio not loaded: ${config.id}`);
@@ -142,7 +193,15 @@ export class SceneSoundManager {
 
 	/** Handle hotspot hover state for hover-triggered sounds */
 	setHoveredHotspot(hotspotId: string | null): void {
-		if (!this.manifest || !this.initialized) return;
+		if (!this.manifest || !this.initialized) {
+			// Don't warn for null hotspot - that's just clearing hover state
+			if (hotspotId !== null) {
+				console.warn(
+					`SceneSoundManager: Cannot set hovered hotspot "${hotspotId}" - not initialized`,
+				);
+			}
+			return;
+		}
 		this.hoverHandler.setHoveredHotspot(
 			hotspotId,
 			this.manifest,
@@ -167,7 +226,10 @@ export class SceneSoundManager {
 
 	/** Update sound states based on game flags */
 	updateSoundStates(): void {
-		if (!this.manifest || !this.initialized) return;
+		if (!this.manifest || !this.initialized) {
+			console.warn("SceneSoundManager: Cannot update sound states - not initialized");
+			return;
+		}
 
 		for (const ambient of this.manifest.ambient) {
 			const shouldPlay = this.checkCondition(ambient.condition);
@@ -181,8 +243,16 @@ export class SceneSoundManager {
 		}
 
 		for (const objSound of this.manifest.objects) {
-			if (this.activeSounds.has(objSound.id) && !this.checkCondition(undefined)) {
+			const shouldPlay = this.checkCondition(objSound.condition);
+			const isPlaying = this.activeSounds.has(objSound.id);
+
+			if (isPlaying && !shouldPlay) {
 				this.stopSound(objSound.id);
+			} else if (!isPlaying && shouldPlay) {
+				const hotspot = this.hotspotMap.get(objSound.hotspotId);
+				if (hotspot) {
+					this.playObjectSound(objSound.id, hotspot.bounds.centerX, hotspot.bounds.centerY);
+				}
 			}
 		}
 	}
@@ -197,7 +267,7 @@ export class SceneSoundManager {
 	}
 
 	/** Fade out all sounds */
-	fadeOutAll(duration: number = 1000): void {
+	fadeOutAll(duration: number = SceneSoundManager.DEFAULT_FADE_OUT_DURATION): void {
 		if (!this.scene?.tweens) {
 			for (const [id] of this.activeSounds) this.stopSound(id);
 			this.hoverHandler.destroy();

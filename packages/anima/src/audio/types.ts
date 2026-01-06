@@ -8,6 +8,8 @@
  * - Oneshot sounds (event-triggered)
  */
 
+import type { VolumeControllableSound } from "./SoundWrapper";
+
 /**
  * Condition for conditional sound playback
  */
@@ -39,6 +41,7 @@ export interface ObjectSoundConfig {
 	rolloffFactor: number;
 	volume: number;
 	loop: boolean;
+	condition?: string; // GameState flag name (true = play)
 }
 
 /**
@@ -79,6 +82,8 @@ export interface SoundManifest {
 export interface ActiveSound {
 	key: string;
 	sound: Phaser.Sound.BaseSound;
+	/** Type-safe wrapper for volume control operations */
+	wrappedSound: VolumeControllableSound;
 	config: AmbientSoundConfig | ObjectSoundConfig | HoverSoundConfig;
 	hotspotId?: string;
 	sourceX?: number;

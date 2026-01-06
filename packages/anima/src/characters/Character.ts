@@ -28,9 +28,30 @@ export interface CharacterAnimConfig {
  * Handles: click-to-move, animations, walking, ground line following.
  */
 export class Character extends GameObjects.Sprite {
+	/**
+	 * Default movement speed in pixels per second.
+	 * 300 provides a comfortable walking pace that feels natural
+	 * without being too slow or appearing to rush.
+	 */
+	protected static readonly DEFAULT_MOVE_SPEED = 300;
+
+	/**
+	 * Distance threshold (in pixels) for considering the character "arrived".
+	 * 5 pixels prevents jittering at destination while being precise enough
+	 * for gameplay purposes.
+	 */
+	protected static readonly ARRIVAL_THRESHOLD = 5;
+
+	/**
+	 * Default minimum approach distance (in pixels) for walkToPosition().
+	 * 80 pixels keeps the character at a comfortable conversational distance
+	 * from hotspots/NPCs rather than walking directly on top of them.
+	 */
+	protected static readonly DEFAULT_APPROACH_DISTANCE = 80;
+
 	protected characterId: string;
 	protected targetX: number | null = null;
-	protected moveSpeed = 300;
+	protected moveSpeed = Character.DEFAULT_MOVE_SPEED;
 	protected isMoving = false;
 	protected animConfig: CharacterAnimConfig;
 	protected onArrivalResolve: (() => void) | null = null;
@@ -143,7 +164,7 @@ export class Character extends GameObjects.Sprite {
 	/**
 	 * Walk to position and return a promise that resolves on arrival
 	 */
-	public walkToPosition(x: number, minDistance = 80): Promise<void> {
+	public walkToPosition(x: number, minDistance = Character.DEFAULT_APPROACH_DISTANCE): Promise<void> {
 		return new Promise((resolve) => {
 			const currentDistance = Math.abs(this.x - x);
 			if (currentDistance <= minDistance) {
@@ -208,7 +229,7 @@ export class Character extends GameObjects.Sprite {
 		const distance = Math.abs(dx);
 
 		// Arrived at target
-		if (distance < 5) {
+		if (distance < Character.ARRIVAL_THRESHOLD) {
 			this.stopMoving();
 			return;
 		}

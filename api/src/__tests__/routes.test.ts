@@ -25,7 +25,7 @@ describe("API Routes", () => {
 
         expect(res.status).toBe(200);
         expect(json.id).toBeDefined();
-        expect(json.id).toMatch(/^sess_\d+_[a-z0-9]+$/);
+        expect(json.id).toMatch(/^sess_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
         expect(json.createdAt).toBeDefined();
 
         sessionId = json.id;
@@ -49,7 +49,7 @@ describe("API Routes", () => {
       });
 
       it("should return 404 for non-existent session", async () => {
-        const res = await app.request("/api/session/sess_9999999999999_notexist");
+        const res = await app.request("/api/session/sess_00000000-0000-0000-0000-000000000000");
         const json = await res.json();
 
         expect(res.status).toBe(404);
@@ -77,7 +77,7 @@ describe("API Routes", () => {
       });
 
       it("should return 404 for non-existent session", async () => {
-        const res = await app.request("/api/session/sess_9999999999999_notexist", {
+        const res = await app.request("/api/session/sess_00000000-0000-0000-0000-000000000000", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ foo: "bar" }),
@@ -110,7 +110,7 @@ describe("API Routes", () => {
       });
 
       it("should return 404 for non-existent session", async () => {
-        const res = await app.request("/api/session/sess_9999999999999_notexist", {
+        const res = await app.request("/api/session/sess_00000000-0000-0000-0000-000000000000", {
           method: "DELETE",
         });
         const json = await res.json();

@@ -3,7 +3,7 @@ import { IrisTransition } from "../transitions";
 import { UIState } from "../ui";
 import { ScenePreloadManager } from "./ScenePreloadManager";
 import type { SceneSoundManager } from "../audio";
-import type { Character } from "../characters";
+import { getCharacterHeadPosition, type Character } from "../characters";
 
 /**
  * Transition options for scene changes
@@ -27,30 +27,6 @@ export class SceneTransitions {
 	}
 
 	/**
-	 * Get player head position for iris transitions.
-	 * Falls back to screen center if player is undefined.
-	 */
-	private getPlayerHeadPosition(
-		player: Character | undefined,
-	): { x: number; y: number } {
-		if (!player) {
-			const cam = this.scene.cameras.main;
-			return {
-				x: cam.scrollX + cam.width / 2,
-				y: cam.scrollY + cam.height / 2,
-			};
-		}
-
-		// Player origin is at bottom-center (feet)
-		// Head is roughly at the top of the sprite (~90% up from feet)
-		const headOffset = player.displayHeight * 0.9;
-		return {
-			x: player.x,
-			y: player.y - headOffset,
-		};
-	}
-
-	/**
 	 * Transition to another scene using iris wipe effect
 	 */
 	public async transitionToScene(
@@ -66,7 +42,7 @@ export class SceneTransitions {
 		if (!skipTransition) {
 			soundManager?.fadeOutAll(duration);
 
-			const headPos = this.getPlayerHeadPosition(player);
+			const headPos = getCharacterHeadPosition(player, this.scene.cameras.main);
 			// Destroy old transition before creating new one
 			this.irisTransition?.destroy();
 			this.irisTransition = new IrisTransition(this.scene);
@@ -85,8 +61,10 @@ export class SceneTransitions {
 
 			try {
 				await preloadManager.waitForSceneWithTimeout(sceneKey, 10000);
-			} catch {
-				// Continue anyway on timeout
+			} catch (error) {
+				console.error(`Scene preload failed: ${sceneKey}`, error);
+				this.scene.events.emit("sceneLoadWarning", { sceneKey, error });
+				// Continue to scene - it may partially work or show placeholder assets
 			}
 
 			UIState.getInstance().showSceneLoading(false);
@@ -100,7 +78,7 @@ export class SceneTransitions {
 	 * Iris in from black at scene start
 	 */
 	public async irisIn(duration = 600, player?: Character): Promise<void> {
-		const headPos = this.getPlayerHeadPosition(player);
+		const headPos = getCharacterHeadPosition(player, this.scene.cameras.main);
 		// Destroy old transition before creating new one
 		this.irisTransition?.destroy();
 		this.irisTransition = new IrisTransition(this.scene);

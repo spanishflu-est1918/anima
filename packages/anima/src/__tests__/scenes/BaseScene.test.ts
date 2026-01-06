@@ -64,8 +64,25 @@ vi.mock("../../characters", () => {
 		setMoveSpeed = vi.fn();
 		destroy = vi.fn();
 	}
+
+	// Mock getCharacterHeadPosition utility
+	const getCharacterHeadPosition = (
+		character: { x: number; y: number; displayHeight: number } | undefined,
+		fallbackCamera: { scrollX: number; scrollY: number; width: number; height: number },
+	): { x: number; y: number } => {
+		if (!character) {
+			return {
+				x: fallbackCamera.scrollX + fallbackCamera.width / 2,
+				y: fallbackCamera.scrollY + fallbackCamera.height / 2,
+			};
+		}
+		const headOffset = character.displayHeight * 0.9;
+		return { x: character.x, y: character.y - headOffset };
+	};
+
 	return {
 		Character: MockCharacter,
+		getCharacterHeadPosition,
 	};
 });
 

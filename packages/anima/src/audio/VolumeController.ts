@@ -9,15 +9,14 @@
 
 import type { ActiveSound } from "./types";
 
-/**
- * Interface for objects with setVolume method
- */
-interface VolumeControllable {
-	setVolume?: (volume: number) => void;
-}
-
 export class VolumeController {
-	private masterVolume: number = 1;
+	/**
+	 * Default master volume level (0-1 range).
+	 * 1.0 = full volume, allowing per-sound configs to control actual levels.
+	 */
+	private static readonly DEFAULT_MASTER_VOLUME = 1;
+
+	private masterVolume: number = VolumeController.DEFAULT_MASTER_VOLUME;
 
 	/**
 	 * Get current master volume
@@ -45,11 +44,8 @@ export class VolumeController {
 	 */
 	updateActiveSoundVolumes(activeSounds: Map<string, ActiveSound>): void {
 		for (const [, active] of activeSounds) {
-			const baseVolume = "volume" in active.config ? active.config.volume : 1;
-			const soundWithVolume = active.sound as unknown as VolumeControllable;
-			if (soundWithVolume?.setVolume) {
-				soundWithVolume.setVolume(baseVolume * this.masterVolume);
-			}
+			const baseVolume = "volume" in active.config ? active.config.volume : VolumeController.DEFAULT_MASTER_VOLUME;
+			active.wrappedSound.setVolume(baseVolume * this.masterVolume);
 		}
 	}
 }

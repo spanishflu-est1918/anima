@@ -10,13 +10,6 @@
 import type { ObjectSoundConfig, ActiveSound } from "./types";
 
 /**
- * Interface for objects with setVolume method
- */
-interface VolumeControllable {
-	setVolume?: (volume: number) => void;
-}
-
-/**
  * SpatialAudioCalculator handles all spatial audio volume calculations
  */
 export class SpatialAudioCalculator {
@@ -97,10 +90,7 @@ export class SpatialAudioCalculator {
 					config,
 				);
 
-				const soundWithVolume = active.sound as unknown as VolumeControllable;
-				if (soundWithVolume?.setVolume) {
-					soundWithVolume.setVolume(volume * masterVolume);
-				}
+				active.wrappedSound?.setVolume(volume * masterVolume);
 			}
 		}
 	}

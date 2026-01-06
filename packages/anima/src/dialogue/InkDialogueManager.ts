@@ -117,14 +117,20 @@ export class InkDialogueManager {
 		return this.storyManager.getAvailableKnots(characterId);
 	}
 
+	/**
+	 * Start dialogue with a character
+	 * @param characterId The character ID to start dialogue with
+	 * @param startKnot Optional starting knot in the story
+	 * @returns true if dialogue started successfully, false if story not found or failed to start
+	 */
 	public async startDialogue(
 		characterId: string,
 		startKnot?: string,
-	): Promise<void> {
+	): Promise<boolean> {
 		const story = this.storyManager.getStory(characterId);
 		if (!story) {
 			console.error(`No story found for: ${characterId}`);
-			return;
+			return false;
 		}
 
 		this._isDialogueActive = true;
@@ -135,7 +141,7 @@ export class InkDialogueManager {
 			if (this.storyManager.hasInterruptedDialogue(characterId)) {
 				this.storyManager.clearInterrupted(characterId);
 				await this.continueStory();
-				return;
+				return true;
 			}
 
 			if (startKnot) {
@@ -143,11 +149,12 @@ export class InkDialogueManager {
 					story.ChoosePathString(startKnot);
 				} catch (error) {
 					console.error(`Failed to start at knot ${startKnot}:`, error);
-					return;
+					return false;
 				}
 			}
 
 			await this.continueStory();
+			return true;
 		} finally {
 			this._isDialogueActive = false;
 			this.callbackHandler.callOnEnd();
