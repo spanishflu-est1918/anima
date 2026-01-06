@@ -23,8 +23,6 @@ build/
 *.log
 npm-debug.log*
 
-# Sprite tools - source files (large)
-packages/sprite-tools/sources/
 *.mp4
 *.mov
 
