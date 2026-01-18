@@ -1,0 +1,7 @@
+[94m[1m| [0m[90m skill    [0mLoaded skill: open-prose
+[?25l│
+◆  Permission required: external_directory (/home/gorkolas/.opencode/skill/open-prose/skills/open-prose/*)
+│  ● Allow once
+│  ○ Always allow: /home/gorkolas/.opencode/skill/open-prose/skills/open-prose/*
+│  ○ Reject
+└

@@ -1,12 +1,14 @@
 /**
  * @anima/storyscript
- * Parser for StoryScript adventure game DSL
+ * Parser and Runtime for StoryScript adventure game DSL
  */
 
 export * from './types.ts';
 export { Lexer, TokenType } from './lexer.ts';
 export type { Token } from './lexer.ts';
 export { Parser, ParseError } from './parser.ts';
+export { StoryRunner, createRunner } from './runtime.ts';
+export type { Action, ActionResult, ChoiceResult, GameState, TriggerResult } from './runtime.ts';
 
 import { Parser } from './parser.ts';
 import type { StoryFile } from './types.js';

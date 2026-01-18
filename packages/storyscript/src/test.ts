@@ -229,4 +229,314 @@ try {
   console.log(`✗ Failed to parse act1.story: ${err instanceof Error ? err.message : err}`);
 }
 
-process.exit(failed > 0 ? 1 : 0);
+// ============================================================================
+// Runtime Tests
+// ============================================================================
+
+console.log('\n' + '='.repeat(50));
+console.log('StoryScript Runtime Tests\n');
+
+import { StoryRunner } from './runtime.ts';
+
+const runtimeTests: { name: string; run: () => boolean }[] = [
+  {
+    name: 'Initialize runner with scene',
+    run: () => {
+      const story = parse(`
+SCENE start
+  location: "Start"
+  DESCRIPTION
+    "The beginning."
+  END
+END
+`);
+      const runner = new StoryRunner(story);
+      return runner.getCurrentScene() === 'start';
+    }
+  },
+  {
+    name: 'Get scene description',
+    run: () => {
+      const story = parse(`
+SCENE room
+  DESCRIPTION
+    "A dark room."
+    "It smells of old books."
+  END
+END
+`);
+      const runner = new StoryRunner(story);
+      const desc = runner.getDescription();
+      return desc.includes('dark room') && desc.includes('old books');
+    }
+  },
+  {
+    name: 'Track inventory with HAS condition',
+    run: () => {
+      const story = parse(`
+SCENE room
+  HOTSPOT door [0,0,10,10]
+    USE
+      IF HAS(key)
+        "The door opens."
+      ELSE
+        "It's locked."
+      END
+    END
+  END
+END
+`);
+      const runner = new StoryRunner(story);
+      
+      // Without key
+      let result = runner.takeAction('USE', 'door');
+      if (!result.text.includes("It's locked.")) return false;
+      
+      // Give key
+      runner.giveItem('key');
+      result = runner.takeAction('USE', 'door');
+      return result.text.includes('The door opens.');
+    }
+  },
+  {
+    name: 'Set and check flags',
+    run: () => {
+      const story = parse(`
+SCENE room
+  HOTSPOT button [0,0,10,10]
+    name: "Button"
+    USE
+      SET button_pressed = true
+      "Click."
+    END
+  END
+END
+
+SCENE hallway
+  HOTSPOT door [0,0,10,10]
+    name: "Door"
+    USE
+      IF button_pressed
+        "The door is unlocked."
+      ELSE
+        "Nothing happens."
+      END
+    END
+  END
+END
+`);
+      const runner = new StoryRunner(story);
+      runner.takeAction('USE', 'button'); // can use id
+      
+      // Check flag was set
+      if (runner.getFlag('button_pressed') !== true) return false;
+      
+      runner.transition('hallway');
+      const result = runner.takeAction('USE', 'door');
+      return result.text.some(t => t.includes('unlocked'));
+    }
+  },
+  {
+    name: 'Dialogue choices',
+    run: () => {
+      const story = parse(`
+DIALOGUE test_talk
+  npc: "Hello!"
+  
+  CHOICE
+    > "Hi there"
+      npc: "Nice to meet you."
+      -> END
+    > "Go away"
+      npc: "Fine."
+      SET rude = true
+      -> END
+  END
+END
+
+SCENE room
+  HOTSPOT npc [0,0,10,10]
+    TALK
+      -> test_talk
+    END
+  END
+END
+`);
+      const runner = new StoryRunner(story);
+      runner.takeAction('TALK', 'npc');
+      
+      const choices = runner.getChoices();
+      if (choices.length !== 2) return false;
+      if (!choices.includes('Hi there')) return false;
+      
+      const result = runner.selectChoice(1); // "Go away"
+      if (!result.text.some(t => t.includes('Fine'))) return false;
+      return runner.getFlag('rude') === true;
+    }
+  },
+  {
+    name: 'GIVE command adds to inventory',
+    run: () => {
+      const story = parse(`
+DIALOGUE shop
+  clerk: "Here's your key."
+  GIVE room_key
+  -> END
+END
+
+SCENE lobby
+  HOTSPOT clerk [0,0,10,10]
+    TALK
+      -> shop
+    END
+  END
+END
+`);
+      const runner = new StoryRunner(story);
+      const result = runner.takeAction('TALK', 'clerk');
+      
+      return runner.hasItem('room_key') && result.itemsGiven.includes('room_key');
+    }
+  },
+  {
+    name: 'Scene transition',
+    run: () => {
+      const story = parse(`
+SCENE room_a
+  HOTSPOT door [0,0,10,10]
+    USE
+      -> room_b
+    END
+  END
+END
+
+SCENE room_b
+  DESCRIPTION
+    "You're in room B."
+  END
+END
+`);
+      const runner = new StoryRunner(story);
+      const result = runner.takeAction('USE', 'door');
+      
+      if (result.goto !== 'room_b') return false;
+      
+      runner.transition('room_b');
+      return runner.getCurrentScene() === 'room_b';
+    }
+  },
+  {
+    name: 'Trigger conditions',
+    run: () => {
+      const story = parse(`
+SCENE hallway
+END
+
+TRIGGER escape
+  REQUIRE HAS(key)
+  REQUIRE AT(hallway)
+  
+  CUTSCENE
+    "You escape!"
+  END
+  
+  -> freedom
+END
+
+SCENE freedom
+END
+`);
+      const runner = new StoryRunner(story, 'hallway');
+      
+      // Without key - no trigger
+      let triggers = runner.checkTriggers();
+      if (triggers.length !== 0) return false;
+      
+      // With key - trigger fires
+      runner.giveItem('key');
+      triggers = runner.checkTriggers();
+      
+      return triggers.length === 1 && 
+             triggers[0].triggerId === 'escape' &&
+             triggers[0].cutsceneText.includes('You escape!');
+    }
+  },
+  {
+    name: 'Serialize and deserialize state',
+    run: () => {
+      const story = parse(`
+SCENE room
+END
+SCENE hallway
+END
+`);
+      const runner = new StoryRunner(story, 'room');
+      runner.giveItem('key');
+      runner.setFlag('talked', true);
+      runner.transition('hallway');
+      
+      const serialized = runner.serialize();
+      const restored = StoryRunner.deserialize(story, serialized);
+      
+      return restored.getCurrentScene() === 'hallway' &&
+             restored.hasItem('key') &&
+             restored.getFlag('talked') === true;
+    }
+  },
+  {
+    name: 'Get available actions',
+    run: () => {
+      const story = parse(`
+SCENE room
+  HOTSPOT painting [0,0,10,10]
+    name: "Painting"
+    LOOK
+      "A portrait."
+    END
+  END
+  
+  HOTSPOT door [0,0,10,10]
+    name: "Door"
+    LOOK
+      "A wooden door."
+    END
+    USE
+      "It's locked."
+    END
+  END
+END
+`);
+      const runner = new StoryRunner(story);
+      const actions = runner.getAvailableActions();
+      
+      const lookActions = actions.filter(a => a.verb === 'LOOK');
+      const useActions = actions.filter(a => a.verb === 'USE');
+      
+      return lookActions.length === 2 && useActions.length === 1;
+    }
+  }
+];
+
+let runtimePassed = 0;
+let runtimeFailed = 0;
+
+for (const test of runtimeTests) {
+  try {
+    if (test.run()) {
+      console.log(`✓ ${test.name}`);
+      runtimePassed++;
+    } else {
+      console.log(`✗ ${test.name} - Check failed`);
+      runtimeFailed++;
+    }
+  } catch (err) {
+    console.log(`✗ ${test.name} - Error: ${err instanceof Error ? err.message : err}`);
+    runtimeFailed++;
+  }
+}
+
+console.log('='.repeat(50));
+console.log(`Runtime Results: ${runtimePassed} passed, ${runtimeFailed} failed`);
+
+const totalFailed = failed + runtimeFailed;
+process.exit(totalFailed > 0 ? 1 : 0);

@@ -1,0 +1,59 @@
+# Shadow Over Innsmouth - Story Extraction
+# Extract structured game data from Lovecraft's text
+
+agent extractor:
+  model: zai-coding-plan/glm-4.7
+
+session: extractor
+  prompt: |
+    Read "The Shadow Over Innsmouth" by H.P. Lovecraft and extract structured data for a point-and-click adventure game.
+
+    SOURCE: https://www.hplovecraft.com/writings/texts/fiction/soi.aspx
+    
+    Extract and output as JSON:
+
+    ## 1. LOCATIONS
+    Every distinct place mentioned. For each:
+    - id: snake_case identifier
+    - name: Display name
+    - description: 1-2 sentences of atmosphere
+    - chapter: Which chapter it appears in (I-V)
+    - importance: "major" (playable scene) or "minor" (mentioned only)
+
+    ## 2. CHARACTERS  
+    Every named or significant unnamed character. For each:
+    - id: snake_case identifier
+    - name: Display name
+    - description: Physical description, especially "the look"
+    - role: Their function in the story
+    - can_talk: boolean - does player interact with them?
+    - key_info: What do they know/reveal?
+
+    ## 3. OBJECTS
+    Items that could be inventory objects or interactive. For each:
+    - id: snake_case identifier
+    - name: Display name
+    - description: What it is
+    - location: Where found
+    - use: What it's used for (if any)
+
+    ## 4. PLOT_BEATS
+    Key story moments in order. For each:
+    - id: snake_case identifier
+    - chapter: I-V
+    - summary: What happens
+    - location: Where it happens
+    - characters: Who's involved
+    - player_action: What could the player DO here?
+
+    ## 5. KEY_DIALOGUE
+    Memorable lines or exchanges. For each:
+    - speaker: Who says it
+    - context: When/why
+    - text: The actual words (or paraphrase)
+    - importance: Why it matters
+
+    Output valid JSON with these 5 top-level keys.
+    Be thorough - this is the foundation for the entire game.
+
+    <promise>COMPLETE</promise>
