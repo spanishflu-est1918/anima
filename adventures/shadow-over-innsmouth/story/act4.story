@@ -310,6 +310,35 @@ DIALOGUE final_conversation
       kat: "I want you to forget."
       
       -> the_end
+      
+    > "Take me with you."
+      hermes: "Take me with you."
+      
+      "She stops. Turns."
+      "Her eyes search yours."
+      
+      kat: "You don't know what you're asking."
+      
+      hermes: "I know exactly what I'm asking."
+      hermes: "I've known since the bus."
+      hermes: "Since you didn't smile at my bad joke."
+      
+      "She laughs. A strange, wet sound."
+      
+      kat: "You'd drown."
+      
+      hermes: "Maybe. Maybe not."
+      hermes: "Either way, I'm not watching you walk away."
+      
+      "She takes your hand."
+      "Her skin is cold. Scaled."
+      "It doesn't matter."
+      
+      kat: "You're insane."
+      
+      hermes: "Probably."
+      
+      -> the_end_together
   END
 END
 
@@ -379,6 +408,57 @@ DIALOGUE kat_walks_into_sea
   "Showing up even when you know how it ends."
   
   -> epilogue
+END
+
+# ============================================================================
+# ALTERNATE ENDING - INTO THE SEA TOGETHER
+# ============================================================================
+
+SCENE the_end_together
+  location: "The Water"
+  time: night
+  mood: surrender
+
+  ON_ENTER
+    "You walk into the sea together."
+    "The water is cold. Then it isn't."
+    "She's right beside you."
+    "The waves close over your head."
+    ""
+    "You should drown."
+    "You don't."
+    ""
+    "There's a city down there."
+    "Lights in the deep."
+    "And something vast, watching."
+    "Waiting."
+    ""
+    "Kat squeezes your hand."
+    "You squeeze back."
+    ""
+    "The surface gets further away."
+    "You don't look up."
+    ""
+    "Some love stories end in the light."
+    "This one doesn't."
+    "That's okay too."
+    -> GAME_END_TOGETHER
+  END
+END
+
+SCENE GAME_END_TOGETHER
+  ON_ENTER
+    ""
+    "S H A D O W   O V E R   I N N S M O U T H"
+    ""
+    "THE END"
+    ""
+    "She found her family."
+    "He found his."
+    "Some people belong to the sea."
+    ""
+    "Thank you for playing."
+  END
 END
 
 # ============================================================================
