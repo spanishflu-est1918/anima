@@ -484,13 +484,14 @@ DIALOGUE kat_library_dialogue
   
   kat: "I found my grandmother's name."
   hermes: "In the town records?"
-  kat: "In the breeding records."
   
   "She hands you a ledger. Handwritten."
   "Names. Dates. Pairings."
+  "Like a stud book for horses."
   
-  kat: "They kept track. Like livestock."
-  kat: "My grandmother was born here. She escaped."
+  kat: "They kept track of who had children with who."
+  kat: "My grandmother. She's in here. 1904."
+  kat: "She got out. Changed her name."
   kat: "My mother never talked about it."
   
   hermes: "Kat..."
@@ -593,31 +594,61 @@ END
 
 DIALOGUE zadok_revelation
   zadok: "Obed Marsh. 1838. He sailed to the South Seas."
-  zadok: "Found an island. Traded with them. The Deep Ones."
+  zadok: "Found an island. Traded with them."
   
-  hermes: "Deep Ones?"
+  hermes: "Traded with who?"
   
-  zadok: "They live under the water. They don't die."
-  zadok: "Obed made a deal. Gold. Fish. In exchange for..."
+  zadok: "The Deep Ones."
   
-  "He drinks."
+  "He drinks. His hands are shaking."
   
+  CHOICE
+    > "What are the Deep Ones?"
+      zadok: "They live under the water. They don't die."
+      zadok: "Fish-men. Or man-fish. Don't matter."
+      zadok: "They been there longer than us. Longer than anything."
+      -> zadok_part2
+    > "What kind of trade?"
+      zadok: "Gold. Fish. More than any nets could catch."
+      zadok: "In exchange for..."
+      "He can't say it."
+      -> zadok_part2
+  END
+END
+
+DIALOGUE zadok_part2
   zadok: "Breeding. They wanted to breed with us."
-  zadok: "The Marsh family first. Then others."
-  zadok: "The children look normal at first. Then they change."
-  zadok: "The Innsmouth look. That's what it is."
   
   hermes: "That's insane."
   
-  zadok: "Is it? You've seen them."
-  zadok: "The ones who change all the way... they go to the water."
-  zadok: "Devil Reef. That's where they live now."
-  zadok: "And Dagon. Father Dagon. He's waiting."
-  zadok: "He's been waiting for a long time."
+  zadok: "Is it? You seen the people here."
+  zadok: "The Marsh family first. Then others."
+  zadok: "Children look normal at first. Then they change."
   
-  "He grabs your arm."
+  hermes: "The Innsmouth look."
+  
+  zadok: "Now you're getting it."
+  
+  CHOICE
+    > "What happens when they change completely?"
+      zadok: "They go to the water. Devil Reef."
+      zadok: "That's where they live now. Thousands of 'em."
+      -> zadok_part3
+    > "And Dagon? The church?"
+      zadok: "Father Dagon. Mother Hydra."
+      zadok: "They're the old ones. Big as houses."
+      zadok: "The church worships them. Has for a hundred years."
+      -> zadok_part3
+  END
+END
+
+DIALOGUE zadok_part3
+  "He grabs your arm. His grip is iron."
   
   zadok: "The Marsh girl. The one you've been talking to."
+  
+  hermes: "Kat?"
+  
   zadok: "She's got the blood. Strong blood."
   zadok: "They'll come for her tonight."
   zadok: "And for you, because you know."

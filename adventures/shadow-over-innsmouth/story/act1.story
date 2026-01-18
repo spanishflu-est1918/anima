@@ -102,8 +102,8 @@ DIALOGUE ticket_clerk_dialogue
       clerk: "You sure about that?"
       CHOICE
         > "I'm sure. Just the ticket."
-          clerk: "It's your business, I suppose."
-          clerk: "Two dollars. Bus leaves in ten minutes."
+          "He shrugs. Pushes the ticket across."
+          clerk: "Two dollars. Bus leaves in ten."
           GIVE bus_ticket
           hermes (thinks): "Everyone has the same reaction."
           -> END
@@ -205,29 +205,21 @@ SCENE bus_interior
       hermes (thinks): "Both going to the same place nobody goes."
     END
     TALK
-      IF NOT talked_to_kat_bus
-        -> kat_bus_dialogue
-      ELSE
-        "She's got her headphones back in."
-        "The conversation's over."
-      END
+      -> kat_bus_dialogue
     END
   END
 
   HOTSPOT window [300, 200, 150, 100]
     name: "Window"
     LOOK
-      IF bus_progress < 1
+      IF NOT looked_at_window
         "Farmland. Stone walls. Normal New England."
-      ELSE IF bus_progress < 2
-        "The farms are gone. Just marsh now."
-        "Salt marsh, stretching to the horizon."
-        hermes (thinks): "We must be getting close."
+        "The further north, the emptier it gets."
+        SET looked_at_window = true
       ELSE
-        "Fog rolling in from the coast."
-        "I can smell the sea. But there's something else."
-        "Something organic. Rotting."
-        hermes (thinks): "That smell..."
+        "Salt marsh now. Fog rolling in."
+        "I can smell the sea. Something rotting underneath."
+        hermes (thinks): "That smell. Like dead fish left in the sun."
       END
     END
   END
@@ -239,8 +231,20 @@ SCENE bus_interior
       "Everything you need to document folklore."
       hermes (thinks): "If there's anything left to document."
     END
+  END
+
+  HOTSPOT rest [250, 320, 80, 60]
+    name: "Close Your Eyes"
     USE
-      EXAMINE notebook
+      IF NOT talked_to_kat_bus
+        "You should talk to her first."
+        "It's a long ride."
+      ELSE
+        "You close your eyes."
+        "The bus rocks. The engine drones."
+        "You don't sleep. But time passes."
+        -> bus_arrives
+      END
     END
   END
 END
@@ -248,6 +252,12 @@ END
 # ----------------------------------------------------------------------------
 
 DIALOGUE kat_bus_dialogue
+  IF talked_to_kat_bus
+    "She's got her headphones back in."
+    "The conversation's over."
+    -> END
+  END
+  
   hermes: "Heading to Innsmouth too?"
   
   kat: "..."
@@ -284,17 +294,19 @@ END
 # ----------------------------------------------------------------------------
 
 TRIGGER bus_arrives
-  AFTER 3 minutes OR window_looked >= 3
+  REQUIRE talked_to_kat_bus
   
   CUTSCENE
+    "You open your eyes."
+    "The landscape has changed. Fog everywhere."
     "The bus slows."
-    "Through the fog, shapes emerge. Buildings."
+    "Through the murk, shapes emerge. Buildings."
     "Old buildings. Crooked. Leaning toward the water."
     driver: "Innsmouth."
-    "The driver's voice is wet. Like he's speaking through water."
+    "The driver's voice is wet. Gurgling."
     driver: "Last stop."
-    "The woman in back stands. She's already heading for the door."
-    "She doesn't look at you."
+    "The woman stands. Already at the door."
+    "She doesn't look back."
     hermes (thinks): "Here we go."
   END
   
