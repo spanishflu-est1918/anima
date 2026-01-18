@@ -9,6 +9,8 @@ export type { Token } from './lexer.ts';
 export { Parser, ParseError } from './parser.ts';
 export { StoryRunner, createRunner } from './runtime.ts';
 export type { Action, ActionResult, ChoiceResult, GameState, TriggerResult } from './runtime.ts';
+export { StoryPlaytester, createClaudeAdapter, createOpenAIAdapter, createMockAdapter } from './playtester.ts';
+export type { SceneReport, PlaytestReport, LLMAdapter, ActionRecord, ChoiceRecord } from './playtester.ts';
 
 import { Parser } from './parser.ts';
 import type { StoryFile } from './types.js';
