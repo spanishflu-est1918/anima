@@ -483,6 +483,7 @@ export class StoryRunner {
           break;
         
         case 'GiveCommand':
+          console.log('  [DEBUG] GIVE command found:', stmt.item);
           this.giveItem(stmt.item);
           itemsGiven.push(stmt.item);
           break;
@@ -517,13 +518,16 @@ export class StoryRunner {
   private executeConditional(conditional: ConditionalBlock): ActionResult {
     // Find the first matching branch
     for (const branch of conditional.branches) {
-      if (this.evaluateCondition(branch.condition)) {
+      const conditionResult = this.evaluateCondition(branch.condition);
+      console.log('  [DEBUG] Condition:', JSON.stringify(branch.condition), '→', conditionResult);
+      if (conditionResult) {
         return this.executeStatements(branch.content);
       }
     }
 
     // Execute else branch if no condition matched
     if (conditional.elseBranch) {
+      console.log('  [DEBUG] Executing elseBranch');
       return this.executeStatements(conditional.elseBranch);
     }
 
