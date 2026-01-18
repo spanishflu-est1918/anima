@@ -1,0 +1,37 @@
+# Anima Monorepo Restructure
+# Dispatch to OpenCode with cheap model
+
+session "Restructure Anima for multiple adventures"
+  prompt: |
+    You are restructuring the Anima point-and-click adventure engine into a monorepo 
+    that supports multiple adventure games.
+
+    CURRENT STRUCTURE:
+    - packages/anima/ (core engine)
+    - packages/sprite-tools/
+    - game/ (single game)
+    - api/
+
+    TARGET STRUCTURE:
+    - packages/engine/ (rename from anima)
+    - packages/sprite-tools/ (keep)
+    - adventures/ (new folder for game projects)
+    - adventures/shadow-over-innsmouth/ (first adventure)
+    - api/ (keep)
+    - tools/ (new - extraction utilities)
+
+    TASKS:
+    1. Rename packages/anima → packages/engine
+    2. Update package.json name from "anima" to "@anima/engine"
+    3. Create adventures/ directory
+    4. Move game/ → adventures/_template/ (as a starter template)
+    5. Create adventures/shadow-over-innsmouth/ by copying template
+    6. Create adventures/shadow-over-innsmouth/source/ for original text
+    7. Create tools/ directory
+    8. Update pnpm-workspace.yaml to include adventures/*
+    9. Update any import paths that reference the old structure
+
+    Work in /home/gorkolas/www/anima/
+    Commit after each major step with clear messages.
+    
+    Output <promise>COMPLETE</promise> when done.
