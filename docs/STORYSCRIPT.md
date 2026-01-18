@@ -1,246 +1,208 @@
-# StoryScript — Adventure Game DSL
+# StoryScript
 
-A domain-specific language for AI-generated, AI-playable point-and-click adventures.
+A minimal language for point-and-click adventures. Direct interpretation — no JSON, no AST.
 
----
+## Philosophy
 
-## Design Goals
+- **Token-efficient**: Designed for LLM generation
+- **Human-readable**: Writers can edit directly
+- **Direct execution**: The format IS the runtime
 
-1. **AI-writable** — Clear structure agents can generate reliably
-2. **AI-playable** — Agents can traverse, make choices, evaluate
-3. **Human-readable** — Writers can review and edit
-4. **Compilable** — Converts to Ink → Anima engine
+## Core Blocks
 
----
+### SCENE
 
-## Basic Structure
+Defines a location. Contains description and hotspots.
 
-```storyscript
-GAME "Shadow Over Innsmouth"
-  author: "Hermes Studio"
-  version: 1.0
-
-CHARACTERS
-  hermes: "Hermes" (player)
-    description: "Young folklorist, glasses, nervous energy"
-  kat: "Kat"
-    description: "Scruffy, guarded, searching for family"
-  clerk: "Hotel Clerk"
-    description: "Middle-aged, the Innsmouth look, wet voice"
-  zadok: "Zadok Allen"
-    description: "Town drunk, terrified, knows everything"
-
-INVENTORY
-  bus_ticket: "Bus Ticket" — "A one-way ticket to Innsmouth"
-  whiskey: "Whiskey Bottle" — "Cheap rotgut. Zadok's currency."
-  room_key: "Room Key" — "Gilman House, Room 7"
-  notebook: "Notebook" — "Your research notes. Growing darker."
 ```
-
----
-
-## Scene Definition
-
-```storyscript
 SCENE bus_station
   location: "Arkham Bus Depot"
-  time: morning
-  mood: uneasy
-  background: "bus_station.png"
-  music: "arkham_ambient.ogg"
-
+  
   DESCRIPTION
-    Diesel fumes hang in the air. Fluorescent lights flicker.
-    A bored clerk sits behind scratched glass.
-    The bus to Innsmouth leaves in ten minutes.
+    A small-town bus depot. Diesel and stale coffee.
+    The clerk looks bored.
   END
-
+  
   ON_ENTER
-    hermes (thinks): "Everyone warned me not to go."
-    hermes (thinks): "That's exactly why I have to."
+    hermes (thinks): "This is the place."
   END
-
-  HOTSPOT ticket_window [120, 200, 80, 100]
+  
+  HOTSPOT ticket_window
     name: "Ticket Window"
     LOOK
-      "Scratched plexiglass. A faded schedule. Innsmouth: 2 departures daily."
+      "Scratched plexiglass."
     END
     TALK
-      -> ticket_clerk_dialogue
-    END
-  END
-
-  HOTSPOT bench [400, 300, 150, 80]
-    name: "Waiting Bench"
-    LOOK
-      "A young woman sits alone. Dark hair, leather jacket."
-      "She stares out the window. Headphones in."
-      hermes (thinks): "Wonder where she's headed."
-    END
-    TALK
-      "She doesn't notice you. Or pretends not to."
-    END
-  END
-
-  HOTSPOT exit_door [600, 250, 50, 150]
-    name: "Exit"
-    USE
-      IF NOT HAS(bus_ticket)
-        "I should get my ticket first."
-      ELSE
-        -> bus_interior
-      END
+      -> buy_ticket
     END
   END
 END
 ```
 
----
+### HOTSPOT
 
-## Dialogue Trees
+Interactive object within a scene. Supports LOOK, TALK, USE.
 
-```storyscript
-DIALOGUE ticket_clerk_dialogue
+```
+HOTSPOT vending_machine
+  name: "Vending Machine"
+  bounds: 100,200,50,100
+  
+  LOOK
+    "Out of order. Has been for years."
+  END
+  
+  USE
+    IF HAS(coin)
+      "It eats your coin. Nothing happens."
+    ELSE
+      hermes (thinks): "Need a coin."
+    END
+  END
+END
+```
+
+### DIALOGUE
+
+Branching conversation. Uses CHOICE for player decisions.
+
+```
+DIALOGUE buy_ticket
   clerk: "Help you?"
   
   CHOICE
     > "One ticket to Innsmouth."
-      clerk: "Innsmouth?"
-      clerk: "You sure about that, son?"
+      clerk: "Innsmouth? You sure?"
       CHOICE
-        > "Just need the ticket."
-          clerk: "Your funeral."
+        > "I'm sure."
+          clerk: "Two dollars."
           GIVE bus_ticket
-          hermes (thinks): "Friendly place."
           -> END
-        > "Why? What's wrong with it?"
-          clerk: "Nothing. Nothing at all."
-          clerk: "That'll be two dollars."
-          GIVE bus_ticket
-          hermes (thinks): "He's lying."
-          SET clerk_warned = true
+        > "What's wrong with it?"
+          clerk: "Nothing. Just... nothing."
           -> END
       END
-    > "Where does that bus actually go?"
-      clerk: "Innsmouth. Nowhere else stops there."
-      clerk: "Smart folks take the long way around."
-      -> ticket_clerk_dialogue
     > "Never mind."
       -> END
   END
 END
 ```
 
----
+### TRIGGER
 
-## Triggers & Events
+Conditional event. Fires when requirements met.
 
-```storyscript
-TRIGGER on_bus_depart
+```
+TRIGGER bus_boarding
   REQUIRE HAS(bus_ticket)
   REQUIRE AT(bus_station)
   
   CUTSCENE
-    "The bus groans to life."
-    "Through the dirty window, Arkham shrinks away."
-    "The woman with the dark hair sits three rows ahead."
-    "She never looks back."
+    The bus idles on the platform.
+    hermes (thinks): "Here we go."
   END
   
   -> bus_interior
 END
 ```
 
----
+## Commands
 
-## Conditionals & State
+### GIVE
 
-```storyscript
-IF HAS(whiskey) AND talked_to_zadok
-  zadok: "You came back. With the good stuff."
-  -> zadok_revelation
-ELSE IF talked_to_zadok
-  zadok: "Go away. They're watching."
+Adds item to inventory.
+
+```
+GIVE flashlight
+```
+
+### SET
+
+Sets a flag.
+
+```
+SET talked_to_clerk = true
+SET suspicion = 3
+```
+
+### Transition (->)
+
+Goes to scene, dialogue, or END.
+
+```
+-> next_scene
+-> some_dialogue
+-> END
+```
+
+## Conditions
+
+### IF / ELSE
+
+Conditional logic within any block.
+
+```
+IF HAS(key)
+  "The door opens."
+  -> next_room
 ELSE
-  zadok: "Who're you? Leave me alone."
+  "Locked."
 END
 ```
 
----
+### Condition Types
 
-## Puzzle Definition
-
-```storyscript
-PUZZLE get_whiskey
-  description: "Zadok won't talk without booze"
-  
-  SOLUTION
-    1. TALK grocery_clerk — refused ("We don't serve outsiders")
-    2. FIND kat at waterfront
-    3. ASK kat to buy whiskey (she's "kin")
-    4. WAIT — she returns with bottle
-    5. GIVE whiskey to zadok
-  END
-  
-  HINTS
-    1. "Zadok keeps looking at the general store..."
-    2. "Maybe someone who looks local could help."
-    3. "Kat said her family name was Marsh..."
-  END
-END
+```
+HAS(item)           # Player has item
+NOT HAS(item)       # Player doesn't have item
+AT(scene)           # Player is at scene
+flag_name           # Flag is truthy
+flag_name = value   # Flag equals value
 ```
 
----
+## Text Lines
 
-## Playtest Annotations
+### Narrative
 
-For AI playtesting, scenes include metadata:
+Plain text is narration.
 
-```storyscript
-SCENE hotel_lobby
-  # PLAYTEST METADATA
-  expected_duration: 3-5 minutes
-  emotional_beat: unease, isolation
-  tension_level: 4/10
-  key_moment: "First glimpse of Kat up close"
-  
-  ...
-END
+```
+The room is dark.
+Something moves in the corner.
 ```
 
-Playtester agent reports:
+### Dialogue
+
+Speaker prefix with colon.
+
 ```
-SCENE: hotel_lobby
-CHOICES_MADE: [looked at clerk, talked to clerk, examined stairs]
-DURATION: 4 minutes
-ENGAGEMENT: 7/10
-PACING: 6/10 — "Wanted more interaction with Kat here"
-CLARITY: 8/10
-EMOTIONAL_HIT: "Clerk description was effectively creepy"
-SUGGESTION: "Add a hotspot for the guest book — foreshadow Marsh name"
+clerk: "Help you?"
+hermes: "One ticket."
 ```
 
----
+### Thoughts
 
-## Compilation Target
+Speaker with (thinks) modifier.
 
-StoryScript compiles to:
-1. **Ink** — Dialogue and branching logic
-2. **Scene configs** — JSON for Anima engine
-3. **Asset manifest** — Required backgrounds, sprites, audio
+```
+hermes (thinks): "This doesn't feel right."
+```
 
----
+## Running
 
-## File Extension
+```bash
+tsx packages/storyscript/src/interpreter.ts adventures/shadow-over-innsmouth/story/act1.story
+```
 
-`.story` or `.ss`
+## REPL Commands
 
----
-
-## Next Steps
-
-1. Write full Shadow over Innsmouth in StoryScript
-2. Build parser (TypeScript)
-3. Build AI traverser/playtester
-4. Build compiler to Ink + Anima
-
+```
+look              # Scene description
+look <target>     # Examine hotspot
+talk <target>     # Talk to hotspot
+use <target>      # Use hotspot
+hotspots          # List hotspots
+inventory         # Show inventory
+state             # Debug state
+quit              # Exit
+```
