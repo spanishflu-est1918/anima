@@ -1,4 +1,4 @@
 packages:
   - 'api'
-  - 'game'
   - 'packages/*'
+  - 'adventures/*'
