@@ -138,7 +138,37 @@ def trim_frames(input_dir, output_dir):
 trim_frames("sprites", "trimmed")
 ```
 
-### 5. Find Loop Points
+### 5. Verify Feet at Bottom (CRITICAL)
+
+**For character sprites, feet MUST be at the very bottom of the frame.** Phaser uses origin (0.5, 1) for characters, meaning the Y position = where feet touch ground. Any padding below feet causes characters to float.
+
+```bash
+# Check a single frame for bottom padding
+magick trimmed/frame-001.png -background red -flatten /tmp/check.png && open /tmp/check.png
+
+# Get exact content bounds
+magick trimmed/frame-001.png -trim -format "Content: %wx%h at +%X+%Y" info:
+```
+
+**If there's padding below feet**, the content height won't match frame height. Fix with:
+
+```bash
+# For spritesheet: crop from top offset, use exact content height
+# Example: content starts at Y=5, height=415, original=467
+magick spritesheet.png -crop WIDTHxCONTENT_HEIGHT+0+TOP_OFFSET +repage spritesheet-fixed.png
+
+# Concrete example:
+magick ashley-spritesheet.png -crop 8428x415+0+5 +repage ashley-spritesheet.png
+```
+
+**Verification checklist:**
+- [ ] Extract one frame, add red background, visually confirm feet touch bottom edge
+- [ ] `magick frame.png -trim info:` should show content height = frame height
+- [ ] No red visible below feet when background is added
+
+**Why this matters:** Character origin is bottom-center. If feet aren't at pixel-bottom, the character floats above ground lines and spawn positions are wrong.
+
+### 6. Find Loop Points
 
 Use **LoopyCut** or identify manually by watching the video:
 
