@@ -947,6 +947,12 @@ Commands:
     if (!skipOnEnter && scene.onEnter.length > 0) {
       console.log('');
       for (const line of scene.onEnter) {
+        // Handle -> transitions in ON_ENTER
+        if (line.trim().startsWith('->')) {
+          const target = line.replace('->', '').trim();
+          await this.handleGoto(target);
+          continue;
+        }
         const result = this.executeSingleLine(line, true);
         if (result) console.log(result);
       }
@@ -1001,7 +1007,32 @@ Commands:
   }
 
   private async handleGoto(target: string): Promise<void> {
-    if (target === 'END') {
+    if (target === 'END' || target === 'GAME_END') {
+      console.log('\n========================================');
+      console.log('THE END');
+      console.log('========================================\n');
+      return;
+    }
+    
+    if (target === 'ACT_END') {
+      // End of act
+      const currentAct = this.state.flags['current_act'] || 1;
+      console.log('\n' + '='.repeat(50));
+      console.log('ACT ' + currentAct + ' COMPLETE');
+      console.log('='.repeat(50));
+      console.log('\nThe story continues in the next act file...');
+      console.log('(End of recorded session)\n');
+      return;
+    }
+    
+    if (target === 'GAME_END_TOGETHER') {
+      console.log('\n========================================');
+      console.log('THE END');
+      console.log('========================================');
+      console.log('\nShe found her family.');
+      console.log('He found his.');
+      console.log('Some people belong to the sea.');
+      console.log('\nThank you for playing.\n');
       return;
     }
     
