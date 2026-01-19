@@ -50,7 +50,7 @@ Reference: The Innsmouth dock scene uses rich sunset oranges, deep ocean blues, 
 
 ## Reference Images
 
-- `photo_2026-01-19 11.35.15.jpeg` - Kat turnaround
-- `photo_2026-01-19 11.35.19.jpeg` - Hermes turnaround
-- `photo_2026-01-19 11.35.38.jpeg` - Dock scene with characters
-- `photo_2026-01-19 11.35.41.jpeg` - Dock scene background only
+- `kat-turnaround.jpeg` - Kat character sheet (5 poses)
+- `hermes-turnaround.jpeg` - Hermes character sheet (3 poses)
+- `innsmouth-dock-with-characters.jpeg` - Scene composition reference
+- `innsmouth-dock-background.jpeg` - Background-only version for layering
