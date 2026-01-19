@@ -1,23 +1,184 @@
 ---
 name: sprite-workflow
-description: Extract animated sprites from AI-generated videos. Use when creating character sprites from Veo/Kling videos.
+description: Full sprite creation pipeline from source image to Phaser spritesheet. Covers isolation, pose generation, video generation, and extraction.
 ---
 
-# Video to Sprite Extraction
+# Sprite Creation Pipeline
 
-**Last updated**: Dec 2024 after 10+ hours of testing
+**Last updated**: Jan 2025 after extensive testing
 
-## TL;DR - The Workflow
+## TL;DR - The Full Workflow
 
 ```
-1. GENERATE VIDEO    → Veo 3.1, grey background, NO SHADOWS
-2. EXTRACT FRAMES    → ffmpeg
-3. REMOVE BACKGROUND → CHROMA KEY (not rembg!)
-4. TRIM TO CONTENT   → Global bounding box
-5. FIND LOOP         → LoopyCut or manual
-6. CREATE SPRITESHEET → montage + JSON metadata
-7. ORGANIZE          → intro/ + loop/ folders
+PHASE 0: SOURCE PREP
+1. ISOLATE CHARACTER → SeedEdit 3.0 + lucataco/remove-bg
+2. GENERATE POSES    → ChatGPT "Describe First" technique
+3. CLOTHE IF NEEDED  → Avoids content moderation
+
+PHASE 1: VIDEO GENERATION
+4. GENERATE VIDEO    → Veo 3.1, grey background, NO SHADOWS
+
+PHASE 2: SPRITE EXTRACTION
+5. EXTRACT FRAMES    → ffmpeg
+6. REMOVE BACKGROUND → CHROMA KEY (not rembg!)
+7. TRIM TO CONTENT   → Global bounding box
+8. VERIFY FEET       → Must be at pixel-bottom
+9. FIND LOOP         → LoopyCut or manual
+10. CREATE SPRITESHEET → montage + JSON metadata
+11. ORGANIZE          → intro/ + loop/ folders
 ```
+
+---
+
+# Phase 0: Source Preparation
+
+## Character Isolation
+
+**Best approach: SeedEdit → remove-bg**
+
+1. **SeedEdit 3.0** (`bytedance/seededit-3.0`) - Isolate character, remove unwanted elements
+   - Cost: ~$0.03/image, ~13 seconds
+   - Prompt: "isolate character on black background, remove [unwanted element]"
+
+2. **lucataco/remove-bg** - Final background removal
+   - Preserves extended limbs better than other models
+   - Use AFTER SeedEdit cleanup
+
+## Pose Generation
+
+**Problem**: API models (FLUX, Ideogram) change character style when generating new poses. They generate generic faces instead of preserving the exact character.
+
+**Solution**: ChatGPT with "Describe First" technique
+
+### The "Describe First" Technique
+
+This is the key to preserving character identity across poses. Having ChatGPT analyze and describe the character first anchors the visual details before generating.
+
+#### Step-by-Step
+
+1. **Start a fresh ChatGPT chat** (Developer mode recommended - no memory contamination)
+
+2. **Upload reference image** and ask:
+   ```
+   Describe this character in detail.
+   ```
+
+3. **Wait for full description** - ChatGPT will analyze face, hair, body, clothing, art style
+
+4. **Request the new pose** with emphasis on preservation:
+   ```
+   Generate this exact character standing in a relaxed idle pose.
+   Arms loosely at her sides, weight slightly on one leg.
+   Keep everything identical - same face, same proportions,
+   same art style, same clothing, same colors.
+   Plain gray background.
+   ```
+
+#### Why This Works
+
+- Forces the model to **internalize specific features** before generating
+- Creates a **stronger style anchor** than direct pose requests
+- The description acts as an **implicit prompt** for the generation
+
+#### Tips
+
+- **Be specific**: "same face, same proportions, same art style"
+- **Keep pose requests minimal**: "standing idle" is enough
+- **Use plain backgrounds**: Gray works well for later removal
+- **Fresh chat for each session**: Avoids context pollution
+
+### Guardrails
+
+Always work with **clothed characters** for pose generation. Create clothed version first, then generate poses freely. This avoids content moderation triggers.
+
+## Workflow Order
+
+1. **Extract** - Isolate character from source (SeedEdit + remove-bg)
+2. **Clothe** - Add clothes via ChatGPT if needed
+3. **Pose** - Generate poses using clothed version as reference
+4. **Clean** - Remove background from final sprites
+
+## Valid Sources
+
+Characters ready for pose generation:
+- `sources/valid/ashley-cherub-clothed.png` - Clothed (black tank, denim shorts), sitting
+- `sources/valid/ashley-cherub-standing.png` - Standing idle pose
+- `sources/valid/ashley-cherub-walking.png` - Walking mid-stride pose
+
+---
+
+# Phase 1: Video Generation
+
+## Target Style: Rubberhose Animation
+
+1920s-30s cartoon style (Betty Boop, Cuphead, early Mickey Mouse):
+- Fluid, bouncy limb movements
+- Arms/legs swing like rubber hoses
+- Exaggerated squash & stretch
+- Rhythmic, musical motion
+
+## Models Tested
+
+| Model | Cost | Result |
+|-------|------|--------|
+| **Veo 3.1** | $0.10/sec (~$0.40/4s) | ✓ **WINNER** - Best quality |
+| Sora 2 Pro | $0.10/sec | ✗ Low quality, content filter issues |
+| Luma Ray Flash 2 | $0.033/sec | ✗ Not good enough |
+| Minimax Video-01-Live | ~$0.50/video | ✗ Not good enough |
+
+## Video Generation Scripts
+
+```bash
+cd packages/sprite-tools
+
+# Veo 3.1 via Replicate (recommended)
+npx tsx scripts/video-generate.ts \
+  --model veo \
+  --image sources/valid/ashley-cherub-standing.png \
+  --prompt "This exact character walks forward to the left, keep identical appearance, bouncy rubberhose walk cycle, arms swing like rubber" \
+  --aspect 9:16
+
+# Wide format (16:9) for characters that move across frame
+npx tsx scripts/video-generate.ts \
+  --model veo \
+  --image sources/wip/skyler-idle-clean.png \
+  --prompt "This exact character walks forward to the left, keep identical appearance, bouncy rubberhose walk cycle" \
+  --aspect 16:9
+```
+
+**Note:** Use `video-generate.ts` (Replicate) not `veo-video.ts` (Google direct API).
+
+## Key Findings
+
+**Best model:** Veo 3.1 (Google) - only one that produces good rubberhose animation
+
+**Starting pose matters:**
+- **Standing sprite → any animation** works best
+- Walking/mid-action sprites confuse the model about direction
+
+**Prompt structure:** Action first, then style references
+```
+[Subject] [action] [direction], [style references], [motion details]
+```
+
+**Working prompt template:**
+```
+Girl [ACTION] to the left, Cuphead animation style, Betty Boop Fleischer cartoon, rubberhose limbs with no joints, bouncy [MOTION TYPE], arms bend like rubber tubes, smooth flowing motion
+```
+
+**What NOT to do:**
+- Don't overstuff prompts describing the image (model already sees it)
+- Don't describe the style when the image already has the style
+- Don't use "girl" with Sora (triggers content filter)
+- Don't use walking pose as input for walking animation
+
+## API Setup
+
+- Replicate token: `REPLICATE_API_TOKEN=...` in `.env`
+
+---
+
+# Phase 2: Video to Sprite Extraction
 
 ## Why Chroma Key > rembg
 
@@ -334,3 +495,15 @@ sources/
 ├── raw/          # Reference images
 └── valid/        # Approved final images
 ```
+
+---
+
+## Models Reference
+
+| Task | Best Model | Notes |
+|------|------------|-------|
+| Isolation | SeedEdit 3.0 | Removes unwanted elements |
+| BG Removal | lucataco/remove-bg | Preserves limbs |
+| Style Edit | ChatGPT (web) | Upload reference image |
+| Pose Change | ChatGPT (web) | "Describe First" technique |
+| Video Gen | Veo 3.1 | Only good rubberhose animation |
