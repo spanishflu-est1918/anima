@@ -4,7 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Anima is a point-and-click adventure game engine extracted from the Will Stancil game. It's a personal framework for building narrative adventure games with AI-driven asset creation.
+Anima is a point-and-click adventure game engine and toolchain. It includes:
+- **Phaser-based game engine** for classic LucasArts/Sierra-style adventures
+- **StoryScript** - a DSL for writing adventure games (direct interpreter, no AST)
+- **Sprite Tools** - AI-driven asset pipeline (image → video → spritesheet)
 
 **Philosophy:** Clear conventions over flexibility. LLM-friendly patterns. Full classic adventure game feature set.
 
@@ -13,36 +16,38 @@ Anima is a point-and-click adventure game engine extracted from the Will Stancil
 | Layer | Technology |
 |-------|------------|
 | Game Engine | Phaser 3 |
-| Dialogue | Ink (inkjs) |
+| Story Format | StoryScript (.story files) |
+| Dialogue (legacy) | Ink (inkjs) |
 | UI | React 19 + Tailwind v4 |
 | Backend | Hono |
 | Database | Turso (libsql) |
 | AI/LLM | Vercel AI SDK |
 | Asset Processing | ImageMagick, FFmpeg |
 
-## Architecture: Engine vs Games
-
-**CRITICAL: Anima is a PACKAGE, not a game.**
+## Architecture
 
 ```
 anima/
 ├── packages/
-│   ├── anima/        # THE ENGINE - BaseScene, Character, Hotspot, DialogueManager
+│   ├── engine/       # Phaser game engine - BaseScene, Character, Hotspot, DialogueManager
+│   ├── storyscript/  # StoryScript interpreter - parses and runs .story files
 │   └── sprite-tools/ # Asset creation pipeline
-├── game/             # TEST GAME - imports from @anima/engine
+├── adventures/       # Individual games
+│   ├── _template/    # Starter template for new games
+│   └── shadow-over-innsmouth/  # Current game in development
 ├── api/              # Shared backend (TTS, AI, persistence)
-└── dialogue/         # Ink source files (per-game)
+└── docs/             # Language specs, guides
 ```
 
-**The separation:**
-- `packages/anima/` exports the engine: scenes, systems, components
-- `game/` (or any game) imports `@anima/engine` and builds on top
-- Games define their own scenes, characters, dialogues - engine provides the framework
+**Key packages:**
+- `packages/engine/` - The Phaser game engine (scenes, characters, hotspots, dialogue)
+- `packages/storyscript/` - StoryScript interpreter with interactive REPL
+- `packages/sprite-tools/` - Shell scripts for AI asset pipeline
 
-**Why this matters:**
-- Engine updates don't break games
-- Multiple games can share the engine
-- Clear boundary between framework and content
+**Adventures:**
+- Each game lives in `adventures/<game-name>/`
+- Games have their own `story/` directory with `.story` files
+- Use `_template/` to bootstrap new games
 
 Uses pnpm workspaces. All packages are in `pnpm-workspace.yaml`.
 
@@ -54,6 +59,9 @@ pnpm dev              # Run game + api concurrently
 pnpm build            # Build all packages
 pnpm lint             # Lint all packages
 pnpm typecheck        # Type check all packages
+
+# StoryScript - Run/playtest stories
+tsx packages/storyscript/src/interpreter.ts adventures/shadow-over-innsmouth/story/act1.story
 
 # Sprite Tools (from packages/sprite-tools/)
 ./scripts/video2sprite.sh <video> <output-name> [--fps 12] [--fuzz 20]
@@ -92,6 +100,41 @@ The critical workflow: **AI Image → AI Video → Sprite Sheet**
 - Opaque vibrant fills (acrylic/gouache look, NOT digital gradient)
 
 If AI output looks generic: REJECT IT. Fallback to extracting from Ashley's paintings.
+
+## StoryScript
+
+A minimal DSL for point-and-click adventures. Direct interpretation - no JSON, no AST.
+
+**File location:** `adventures/<game>/story/*.story`
+
+**Core blocks:**
+- `SCENE` - Locations with description, hotspots, ON_ENTER hooks
+- `HOTSPOT` - Interactive objects with LOOK/TALK/USE actions
+- `DIALOGUE` - Branching conversations with CHOICE blocks
+- `TRIGGER` - Conditional events with CUTSCENE support
+
+**Commands:**
+- `GIVE item` - Add to inventory
+- `SET flag = value` - Set game state
+- `-> target` - Transition to scene/dialogue/END
+
+**Conditions:**
+- `IF HAS(item)` / `IF NOT HAS(item)`
+- `IF flag` / `IF flag = value`
+
+**REPL commands when playtesting:**
+```
+look              # Scene description
+look <target>     # Examine hotspot
+talk <target>     # Talk to hotspot
+use <target>      # Use hotspot
+hotspots / h      # List available hotspots
+inventory / i     # Show inventory
+state             # Debug game state
+quit / q          # Exit
+```
+
+**Full spec:** See `docs/STORYSCRIPT.md`
 
 ## Core Architecture Patterns
 
