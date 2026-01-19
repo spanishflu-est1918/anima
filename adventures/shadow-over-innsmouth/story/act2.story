@@ -175,7 +175,24 @@ SCENE town_square
   HOTSPOT hotel_direction [50, 200, 50, 150]
     name: "Back to Hotel"
     USE
-      -> hotel_lobby
+      -> hotel_lobby_evening
+    END
+  END
+
+  HOTSPOT library_direction [550, 150, 60, 100]
+    name: "Old Library"
+    condition: knows_library_entrance
+    LOOK
+      "The old library. Closed for twenty years."
+      "But Kat said there's a way in. Back window."
+    END
+    USE
+      IF knows_library_entrance
+        "You slip around back. The window is unlocked, just like she said."
+        -> library
+      ELSE
+        "The doors are chained shut."
+      END
     END
   END
 END

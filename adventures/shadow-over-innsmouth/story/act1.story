@@ -542,6 +542,35 @@ DIALOGUE hotel_clerk_dialogue
 END
 
 # ============================================================================
+# SCENE: HOTEL ROOM
+# ============================================================================
+
+SCENE hotel_room
+  location: "Room 7, Gilman House"
+  time: night
+  mood: uneasy
+
+  DESCRIPTION
+    A cramped room at the top of the stairs.
+    Peeling wallpaper. Water stains on the ceiling.
+    The bed looks damp. Everything smells of the sea.
+  END
+
+  ON_ENTER
+    "You lock the door. Wedge a chair under the handle."
+    "Through the grimy window: fog, and distant lights on the water."
+    "Devil Reef?"
+    hermes (thinks): "Tomorrow. I'll find answers tomorrow."
+    hermes (thinks): "For now... sleep."
+    "You don't undress. You don't trust this place."
+    "You lie on top of the covers and close your eyes."
+    "The sea whispers outside."
+    "Eventually, you sleep."
+    -> ACT_END
+  END
+END
+
+# ============================================================================
 # END OF ACT 1
 # ============================================================================
 
