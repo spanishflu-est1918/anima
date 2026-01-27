@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+.venv/
 
 # Build outputs
 dist/
@@ -22,9 +23,6 @@ build/
 # Logs
 *.log
 npm-debug.log*
-
-*.mp4
-*.mov
 
 # Generated previews
 *_preview.gif
