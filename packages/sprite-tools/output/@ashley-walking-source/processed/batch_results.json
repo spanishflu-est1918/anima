@@ -1,0 +1,42 @@
+{
+  "source_metadata": "output/@ashley-walking-source/grids/metadata.json",
+  "grids_processed": 5,
+  "results": [
+    {
+      "grid": "grid-01-gray.png",
+      "white": "grid-01-white.png",
+      "black": "grid-01-black.png",
+      "eval_pass": true,
+      "eval_issues": []
+    },
+    {
+      "grid": "grid-02-gray.png",
+      "white": "grid-02-white.png",
+      "black": "grid-02-black.png",
+      "eval_pass": true,
+      "eval_issues": []
+    },
+    {
+      "grid": "grid-03-gray.png",
+      "white": "grid-03-white.png",
+      "black": "grid-03-black.png",
+      "eval_pass": true,
+      "eval_issues": []
+    },
+    {
+      "grid": "grid-04-gray.png",
+      "white": "grid-04-white.png",
+      "black": "grid-04-black.png",
+      "eval_pass": true,
+      "eval_issues": []
+    },
+    {
+      "grid": "grid-05-gray.png",
+      "white": "grid-05-white.png",
+      "black": "grid-05-black.png",
+      "eval_pass": true,
+      "eval_issues": [],
+      "attempts": 1
+    }
+  ]
+}
