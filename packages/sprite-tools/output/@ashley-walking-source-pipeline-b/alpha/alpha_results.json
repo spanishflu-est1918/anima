@@ -1,0 +1,25 @@
+{
+  "source_batch": "/Users/gorkolas/www/anima/packages/sprite-tools/output/@ashley-walking-source-pipeline-b/processed/batch_results.json",
+  "alpha_files": [
+    {
+      "grid": "grid-05-gray.png",
+      "alpha": "grid-05-alpha.png"
+    },
+    {
+      "grid": "grid-04-gray.png",
+      "alpha": "grid-04-alpha.png"
+    },
+    {
+      "grid": "grid-03-gray.png",
+      "alpha": "grid-03-alpha.png"
+    },
+    {
+      "grid": "grid-02-gray.png",
+      "alpha": "grid-02-alpha.png"
+    },
+    {
+      "grid": "grid-01-gray.png",
+      "alpha": "grid-01-alpha.png"
+    }
+  ]
+}

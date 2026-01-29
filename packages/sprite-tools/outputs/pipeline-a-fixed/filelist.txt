@@ -1,0 +1,16 @@
+file 'frames-fixed/frame-001.png'
+duration 0.0417
+file 'frames-fixed/frame-002.png'
+duration 0.0417
+file 'frames-fixed/frame-003.png'
+duration 0.0417
+file 'frames-fixed/frame-004.png'
+duration 0.0417
+file 'frames-fixed/frame-005.png'
+duration 0.0417
+file 'frames-fixed/frame-006.png'
+duration 0.0417
+file 'frames-fixed/frame-008.png'
+duration 0.0417
+file 'frames-fixed/frame-009.png'
+duration 0.0417
