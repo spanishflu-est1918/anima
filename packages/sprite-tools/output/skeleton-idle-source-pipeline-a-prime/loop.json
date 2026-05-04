@@ -1,0 +1,29 @@
+{
+  "input_file": "/Users/gorkolas/www/anima/packages/sprite-tools/output/skeleton-idle-source/skeleton-idle-source.mp4",
+  "output_file": "/Users/gorkolas/www/anima/packages/sprite-tools/output/skeleton-idle-source-pipeline-a-prime/loop.mp4",
+  "loop_info": {
+    "start_frame": 2,
+    "end_frame": 10,
+    "start_time": 0.16666666666666666,
+    "end_time": 0.8333333333333334,
+    "duration": 0.6666666666666666,
+    "frame_count": 8,
+    "similarity_score": 0.99972020058873,
+    "quality_score": 0.99972020058873,
+    "fps": 12.0,
+    "downsample_factor": 1,
+    "final_score": 1.0663868672553967
+  },
+  "processing_options": {
+    "similarity_threshold": 98,
+    "method": "combined",
+    "buffer_start": 0.0,
+    "buffer_stop": 0.0,
+    "resolution": null,
+    "speed": 1.0,
+    "include_audio": false,
+    "resize_strategy": "center",
+    "loop_count": 1,
+    "loop_index": 1
+  }
+}
